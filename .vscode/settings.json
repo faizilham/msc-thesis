@@ -1,0 +1,15 @@
+{
+  "generic-lsp.configuration": [
+        {
+            "lsp": "typst-languagetool-lsp",
+            "language": "typst",
+            "options": {
+                "languages": ["en-US"],
+                "bundled": true,
+                "disabled_checks": {
+                  "en-US": ["UNLIKELY_OPENING_PUNCTUATION", "EN_UNPAIRED_BRACKETS"]
+                }
+            }
+        }
+    ],
+}
