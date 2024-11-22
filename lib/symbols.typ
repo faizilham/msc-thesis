@@ -9,7 +9,7 @@
 #let meet = math.sect.sq
 
 // Analysis specific symbols
-#let lbl = e => text(size: 0.85em)[\$] + e
+#let lbl = e => text(size: 0.85em, sym.dollar) + e
 
 #let evalentry = body => $evalbracket(body)^circle.small$
 #let evalexit = body => $evalbracket(body)^(circle.filled.small)$

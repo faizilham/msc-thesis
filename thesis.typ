@@ -1,4 +1,3 @@
-
 #import "lib/template.typ": template, front-matter, main-matter, back-matter
 
 #show: template.with(author: "Your name")

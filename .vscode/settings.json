@@ -7,7 +7,11 @@
                 "languages": ["en-US"],
                 "bundled": true,
                 "disabled_checks": {
-                  "en-US": ["UNLIKELY_OPENING_PUNCTUATION", "EN_UNPAIRED_BRACKETS"]
+                  "en-US": [
+                    "UNLIKELY_OPENING_PUNCTUATION",
+                    "EN_UNPAIRED_BRACKETS",
+                    "COMMA_PARENTHESIS_WHITESPACE"
+                  ]
                 }
             }
         }

@@ -1,8 +1,9 @@
 = Preliminaries and Related Works
 
-/**
- *
-Titles:
-- Background and related work
-- Literature Review
-*/
+== The Kotlin programming language
+
+== Data flow analysis with monotonic framework
+
+== Substructural type system
+
+== Other related works

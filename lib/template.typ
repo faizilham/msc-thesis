@@ -136,7 +136,7 @@
     set text(size: 22pt)
 
     if (not in-tail.get()) {
-      v(10%)
+      // v(6%)
       text(chapter_number, size: 28pt)
     } else {
       chapter_number
