@@ -14,6 +14,8 @@
 #let evalentry = body => $evalbracket(body)^circle.small$
 #let evalexit = body => $evalbracket(body)^(circle.filled.small)$
 
+#let angles = body => $angle.l body angle.r$
+
 #let orpair = $accent(or, arrow.l.r)$
 
 // Terms

@@ -1,5 +1,7 @@
 // Template based on EPFL Thesis (Unofficial) Typst Template by augustebaum: https://github.com/augustebaum/epfl-thesis-typst
 
+#import "@preview/showybox:2.0.3": *
+
 #let fill-line(left-text, right-text) = [#left-text #h(1fr) #right-text]
 
 // The `in-outline` mechanism is for showing a short caption in the list of figures
@@ -79,10 +81,6 @@
     date: if date != none { date } else { auto },
     keywords: keywords
   )
-
-  // set cite(style: "alphanumeric")
-
-  show "TODO:": it => text(it, weight: "bold", fill: color.red)
 
   // Set the body font.
   // set text(font: ("Utopia LaTeX"), size: 11pt)
@@ -259,8 +257,36 @@
   }
   set table(stroke: none)
 
+  show figure.where(kind: raw): fig => {
+    showybox(
+      fig.body,
+      title-style: (
+        weight: "bold",
+        color: black,
+        sep-thickness: 0pt,
+        align: left,
+      ),
+      frame: (
+        title-color: gray.lighten(80%),
+        border-color: gray.darken(20%),
+        thickness: (left: 1pt),
+        radius: 0pt
+      ),
+      breakable: true,
+      title: fig.caption,
+    )
+  }
+
   // Set raw text font.
-  show raw: set text(font: "Fira Mono" , size: 10pt)
+  show raw: set text(font: "Consolas" , size: 10pt)
+
+  // show: codly-init.with()
+
+  // codly(
+  //   display-name: false,
+  //   zebra-fill: rgb(240, 240, 250),
+  //   breakable: true
+  // )
 
   // Display inline code in a small box that retains the correct baseline.
   // show raw.where(block: false): box.with(
@@ -268,7 +294,14 @@
   // )
 
   // Display block code with padding.
-  show raw.where(block: true): block.with(inset: (x: 5pt))
+  // show raw.where(block: true): block.with(inset: (x: 5pt))
+  //
+
+  // highlight TODOs
+  show "TODO:": it => text(it, weight: "bold", fill: color.red)
+
+  // set citation
+  // set cite(style: "alphanumeric")
 
   // Show a small maroon circle next to external links.
   // show link: it => {
