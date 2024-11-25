@@ -10,7 +10,8 @@
                   "en-US": [
                     "UNLIKELY_OPENING_PUNCTUATION",
                     "EN_UNPAIRED_BRACKETS",
-                    "COMMA_PARENTHESIS_WHITESPACE"
+                    "COMMA_PARENTHESIS_WHITESPACE",
+                    "WHITESPACE_RULE"
                   ]
                 }
             }
