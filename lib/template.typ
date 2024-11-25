@@ -80,6 +80,10 @@
     keywords: keywords
   )
 
+  // set cite(style: "alphanumeric")
+
+  show "TODO:": it => text(it, weight: "bold", fill: color.red)
+
   // Set the body font.
   // set text(font: ("Utopia LaTeX"), size: 11pt)
   set text(size: 11pt)

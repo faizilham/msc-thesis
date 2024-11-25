@@ -1,1 +1,1 @@
-#bibliography("references.bib", style: "apa", title: "References")
+#bibliography("references.bib", style: "ieee", title: "References")
