@@ -272,7 +272,7 @@
         thickness: (left: 1pt),
         radius: 0pt
       ),
-      breakable: true,
+      // breakable: true,
       title: fig.caption,
     )
   }

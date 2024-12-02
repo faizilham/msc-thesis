@@ -1,4 +1,7 @@
 {
+  "workbench.colorTheme": "Atom One Light",
+  "editor.minimap.enabled": false,
+  // "tinymist.exportPdf": "onSave",
   "generic-lsp.configuration": [
         {
             "lsp": "typst-languagetool-lsp",
