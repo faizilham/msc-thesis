@@ -51,7 +51,7 @@ All AST constructs are transformed into the following CFG nodes.
 + Return statement. #cfg("return $val")
 + Lambda expression #cfg("$e = "+ $lambda$ +".{subgraph}")
 
-=== Notations
+=== Common Notations
 
 TODO: notation definitions
 
@@ -78,7 +78,7 @@ A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A
 
 A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the ordering defined as $bot leqsq a leqsq top$, for all $a in A$.
 
-A linearly ordered lattice $"OrderLat"(angles(lr(bot = a_1, ..., a_n = top))) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
+A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
 #pagebreak()
 
@@ -135,7 +135,7 @@ $
 Lattices
 
 $
-  U &= "OrderLat"(angles(lr(bot, "UT", top))) \
+  U &= "OrderLat"(angles(bot, "UT", top)) \
   S &= "MapLat"("Ref" -> U) \
   evalbracket("_") &:: "Node" -> S\
 $
@@ -253,7 +253,7 @@ Utilization analysis
 
 Lattice (same as backward)
 $
-  U = "OrderLat"(angles(lr(bot, "UT", top))) \
+  U = "OrderLat"(angles(bot, "UT", top)) \
   S = "MapLat"("Ref" -> U) \
   evalbracket("_") :: "Node" -> S\
 $
@@ -278,6 +278,76 @@ $
 Analysis result, warning = ${f | f in "CR" and evalentry(mono("start"))(f) leqsq.not "UT" }$
 == Generalizing function calls
 TODO: defining behaviors
+
+functions can:
+- utilize any of its argument
+- returns a new utilizable values
+- in case of lambdas, utilize any of its free variable
+- invalidates argument or free variable
+
+=== Utilization function signature
+
+#let ann(body) = $angle.l.double body angle.r.double$
+#let ef = math.accent("e", math.hat)
+#let efv = math.epsilon
+#let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
+#let plusef = math.plus.circle
+#let timesef = math.times.circle
+#let efs(l, r) = $#l parallel #r$
+// #let efl(..body) = $bracket #body.pos().join(",") bracket.r$
+#let efl(..body) = angles(..body)
+
+TODO: text
+
+$E ::= U | N | I $
+
+where $U$ = Utilized, $N$ = Not changed, $I$ = Invalidated, with operators $(plusef, timesef)$ defined as follows.
+
+$
+  // ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
+  // ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
+  U plusef N = U", and" ef plusef I = I "for all" ef :: E\
+  U timesef N = N", and" ef timesef I = I "for all" ef :: E\
+
+$
+
+Both operators obey idempotence ($ef circle ef = ef$) and commutative ($ef_1 circle ef_2 = ef_2 circle ef_1$) properties.
+
+A function type can be annotated with utilization effects after the return type,
+such as
+
+// $f :: t_1 -->^angles(ef_1, theta_1) ... -->^angles(ef_(n-1),theta_(n-1)) t_n -->^angles(ef_n,theta_n) t_ret$
+
+$wide f ::(t_1,..., t_n) -> t_ret andef efs(efl(ef_1, ..., ef_n), Theta)$
+
+where $Theta = {v |-> ef_v | v in "FV"(f)}$.
+
+This notation indicates that after the call of $f$, the effect $ef_i$ is applied to the value passed as $i$-th argument, and $ef_v$ is applied to free variable $v$.
+
+A non-annotated function type is equivalent to having no effect to its arguments and free variables.
+
+$wide f ::(t_1,..., t_n) -> t_ret andef efs(efl(N, ..., N), {v |-> N | v in "FV"(f)})$
+
+Because many functions do not have free variables, it is often the case that $Theta = emptyset$. For convenience, we shorten the notation in such cases:
+
+$wide f ::(t_1,..., t_n) -> t_ret andef efl(ef_1, ..., ef_n)$
+
+
+For example, the function "`await(x: Deferred<t>): t`" can be notated as:
+
+$wide "await" :: ("Deferred"[t]) -> t andef efl(U)$
+
+Effect annotation can also be parametric, especially for higher order function. For example, the function "`let(x: a, f: a -> b): b`" can be notated as:
+
+$wide "let" ::(a, (a) -> b andef efs(efl(efv), theta)) -> b andef efs(efl(efv, N), theta)$
+
+// $f :: ann(omega_1) t_1 ->^(ef_1)_(theta_1) ... ->^(ef_(n-1))_(theta_(n-1)) ann(omega_n) t_n ->^(ef_n)_(theta_n) t_ret$
+
+
+// $f ::(ann(omega_1)t_1,...,ann(omega_n) t_n) -> t_ret andef angles((ef_1, ..., ef_n), Theta)$
+
+=== Analysis with function signature
+
 
 - function alias analysis
 
@@ -324,7 +394,7 @@ $
 Resolve function alias: $"Resolve"(p, e) = evalexit(p)(e)$, $"Resolve"::"Node" times "Ref" -> ("Func" + bot + top)$
 ] /* End of Function Alias Analysis */
 
-We also want the analysis to track utilizable values returned from any function calls, and not only from $mono("create")$ calls. To allow this, we need to modify the transfer function of the safely-reachable value analysis defined in @eq:RVTransferFunc as follows.
+We also want the analysis to track utilizable values returned from any function calls, and not only from `create` calls. To allow this, we need to modify the transfer function of the safely-reachable value analysis defined in @eq:RVTransferFunc as follows.
 
 $
   "Replace the equation:"\
@@ -336,26 +406,34 @@ $ <eq:RVModifyCreateFunc>
 
 TODO: The complete modification is provided in Appendix ...
 
-#let ann(body) = $angle.l.double body angle.r.double$
-#let ef = math.accent("e", math.hat)
-#let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
-
-=== Utilization function signature
+=== Inferencing lambda signature
 TODO: text
 
-A function type can be annotated with utilization effects after the return type,
-such as
-
-$f :: ann(omega_1) t_1 ->^(epsilon_1)_(theta_1) ... ->^(epsilon_(n-1))_(theta_(n-1)) ann(omega_n) t_n ->^(epsilon_n)_(theta_n) t_ret$
-
-$f ::(ann(omega_1)t_1,...,ann(omega_n) t_n) -> t_ret andef angles(lr((epsilon_1, ..., epsilon_n), Theta))$, where $Theta = union.big theta_i = {v |-> epsilon_v | v in "FV"(f)}$
-
-
-=== DFA with signature
+== Utilizable collection types
 TODO: text
 
-== Tracking a collection of utilizable values
-TODO: text
+- maintaining invariant: Items in collection are either all utilized or not
+
+=== Utilization preconditions
+
+A function signature can also denotated with utilization preconditions in its parameter:
+
+$wide f :: (ann(omega_1) t_1, ..., ann(omega_n) t_n) -> t_ret andef efs(efl(ef_1, ..., ef_n), Theta)$
+
+where $omega_i subset.eq {0, 1}$, 0 = Not Utilized, 1 = Utilized.
+
+This indicates that the call of function $f$ requires $"utilization"(a_i) in omega_i$ for each $a_i$ the value passed as $i$-th argument. If there is an argument that doesn't fulfil its precondition, it should be reported as an error. Any parameters without annotations are the same as annotated with $ann(0|1)$.
+
+=== Collection utilization
+Collection functions
+$
+  "utilizeAll" :: (C[a]) -> () andef efl(U)\
+  "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef efs(efl(efv), theta)) -> C[b] andef efs(efl(efv, N), theta)\
+  "add" :: (C[a], a) -> () andef efl(I, U)\
+  "remove" :: (ann(1) C[a], a) -> ()\
+  "filter" :: (ann(1) C[a], (a)-> "Bool" andef efs(efl(efv), theta)) -> C[a] andef efs(efl(efv, N), theta)\
+$
+
 
 == A better error reporting
 TODO: text
@@ -384,16 +462,7 @@ Analyze(F, UpperAlias):
   return (Warnings + GenWarning(S), GenUtilParam(S), GenUtilFV(S))
 ```
 
-$E ::= U | N | I$
 
-where $U$ = Utilized, $N$ = No change, $I$ = Invalidated, with operator $(+, dot)$ defined as:
-
-$
-  ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
-  ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
-  U + N = U; ef + I = I\
-  U dot N = N; ef dot I = I\
-$
 
 A function type can be annotated with utilization effects after the return type,
 such as
@@ -664,17 +733,6 @@ $
 //   "remove" :: (ann(-1) C angles(U), U) -> ()\
 //   "filter" :: (ann(-1) C angles(U), (U)-> "Bool") -> C angles(U)\
 // $
-
-
-$
-  "utilize" :: (C angles(A)) -> () andef U\
-  "map" :: (C angles(A), (A) -> B andef epsilon) -> C angles(B) andef (epsilon, N)\
-  "add" :: (ann(omega) C angles(A), U) -> () andef (N, Q(omega))\
-  "add" :: ann(omega) C angles(A) -> U ->^(Q(omega)) ()\
-  // "add" :: (C angles(A), ann(1) U) -> ()\
-  "remove" :: (C angles(A), A) -> () andef (I, N)\
-  "filter" :: (C angles(A), (A)-> "Bool") -> C angles(A) andef (I, N)\
-$
 
 #pagebreak()
 

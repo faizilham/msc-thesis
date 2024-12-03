@@ -24,7 +24,10 @@
 #let spx = $s_p^circle.small.filled$
 #let sp = $s_p^circle.small$
 
-#let angles(body) = $angle.l body angle.r$
+#let angles(..body) = {
+  let merged = body.pos().join(", ")
+  $angle.l merged angle.r$
+}
 
 #let orpair = $accent(or, arrow.l.r)$
 
