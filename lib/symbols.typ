@@ -1,5 +1,4 @@
 // Math Symbol Shortcuts
-#let evalbracket = body => $[| body |]$
 #let powerset = body => $cal(P)(body)$
 
 #let leqsq = math.subset.eq.sq
@@ -11,10 +10,21 @@
 // Analysis specific symbols
 #let lbl = e => text(size: 0.85em, sym.dollar) + e
 
-#let evalentry = body => $evalbracket(body)^circle.small$
-#let evalexit = body => $evalbracket(body)^(circle.filled.small)$
+#let evalbracket(body, sub:none) = {
+  if sub == none {
+    $[| body |]$
+  } else {
+    $[| body |]_#sub$
+  }
+}
 
-#let angles = body => $angle.l body angle.r$
+#let evalentry(body, sub:none) = $evalbracket(body, sub:sub)^(circle.small)$
+#let evalexit(body, sub:none) = $evalbracket(body, sub:sub)^(circle.filled.small)$
+
+#let spx = $s_p^circle.small.filled$
+#let sp = $s_p^circle.small$
+
+#let angles(body) = $angle.l body angle.r$
 
 #let orpair = $accent(or, arrow.l.r)$
 

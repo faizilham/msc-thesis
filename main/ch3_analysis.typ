@@ -17,7 +17,7 @@ TODO: initial paragraph
 
 We first define a model of control flow graph (CFG) that we use in the data flow analysis. This CFG model is a simplified version of the real control flow graph in the Kotlin compiler.
 
-We assume that each expression and sub-expression in the program's AST is labeled with a unique number $e$. @lst:ExprLabel shows an example of expressions labeling, in which each number written in superscript letter is the label number for the corresponding expression.
+We assume that each expression and sub-expression in the program's AST is labeled with a unique label $e$. @lst:ExprLabel shows an example of expressions labeling, in which the numbers written in superscript letter are the labels for the corresponding expression.
 
 // ¹²³⁴⁵⁶⁷⁸⁹⁰
 #listing("Expression labeling")[
@@ -36,7 +36,7 @@ fun test(x: Int, y: Boolean) {
 
 #let cfg(body) = text(font: "Consolas", [[#body]])
 
-Given an expression label $e$, the value of the expression is denoted as $lbl(e)$. For example, using the expression labels in @lst:ExprLabel, the value of $lbl(1)$ is equal to 2, and the value of $lbl(3)$ is equal to $(2 + x)$.
+Given an expression label $e$, the value of the expression is denoted as $lbl(e)$. For example, using the expression labels in @lst:ExprLabel, the value of $lbl(1)$ is equal to 2, and the value of $lbl(3)$ is equal to $(lbl(1) + lbl(2))$, in other words the evaluation result of $(2 + x)$.
 
 TODO: nodes explanation and transformation examples
 
@@ -44,36 +44,41 @@ All AST constructs are transformed into the following CFG nodes.
 + Function start #cfg[start] and exit #cfg[exit]
 + Literal constant. #cfg("$e = <Lit>")
 + Identifier access. #cfg("$e = x")
-+ Variable declaration. #cfg("var x := $val")
++ Variable declaration. #cfg("var x")
 + Variable assignment. #cfg("x := $val")
 + When begin #cfg("when_begin($cond)") and end #cfg("when_end")
 + Function call #cfg([\$e = \$f(\$arg#sub("1"), ... ,\$arg#sub("n"))])
 + Return statement. #cfg("return $val")
-+ Lambda expression #cfg("$e = <"+ $lambda$ +".subgraph>")
++ Lambda expression #cfg("$e = "+ $lambda$ +".{subgraph}")
 
 === Notations
 
 TODO: notation definitions
 
-Given $s$ a mapping of $X -> Y$, $s[x -> y]$ means replace any mapping $(x -> *)$ in $s$ with $(x -> y)$. Formally:
+Given $s$ a mapping of $X -> Y$, $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$. Formally:
 
 $
-  &s[x -> y] &&= (s without {x -> *}) union {x -> y} \
-  &s[x_1 -> y_1, x_2 -> y_2]& &= (s[x_1 -> y_1])[x_2 -> y_2] \
-  &s[x -> y | phi(x) ] &&= cases(
-    s[x -> y] & "for all" x "that satisfy predicate "phi(x),
+  &s[x |-> y] &&= (s without {x |-> *}) union {x |-> y} \
+  &s[x_1 |-> y_1, x_2 |-> y_2]& &= (s[x_1 |-> y_1])[x_2 |-> y_2] \
+  &s[x |-> y | phi(x) ] &&= cases(
+    s[x |-> y] & "for all" x "that satisfy predicate "phi(x),
     s         & "otherwise"
   )
 $
 
-Map lattice:
+A map lattice $"MapLat"(A -> L)$ is a lattice of the mapping from set A to lattice L, and its ordering is equivalent to the ordering of lattice L.
 
 $
-  M = "MapLat"(A, L) = (A -> L, attach(leqsq, br: L))\
+  M = "MapLat"(A -> L) = (A -> L, attach(leqsq, br: L))\
   "where, for all" m_1, m_2 in powerset(M), "this property holds":\
   m_1 leqsq m_2 equiv forall a in A . m_1(a) attach(leqsq, br: L) m_2(a)
 $
 
+A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A$, with subset or equal ($subset.eq$) as the ordering operator.
+
+A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the ordering defined as $bot leqsq a leqsq top$, for all $a in A$.
+
+A linearly ordered lattice $"OrderLat"(angles(lr(bot = a_1, ..., a_n = top))) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
 #pagebreak()
 
@@ -105,18 +110,246 @@ fun simple() {
 @lst:SimpleModelExample shows an example of utilization tracking in this simplified model, with each `create` call marked with "OK" or "Error". In the example, the `create` call C1 can always be traced to a `utilize` via variable `a` or variable `a1`. Both C2 and C3 are utilized through variable `b`. The call C4 is the first error example. In this case, C4 is not utilized if the conditional expression `cond3` is true and and `cond4` is false. On the other hand, the call C5 is always utilized through variable `d1`, since if `cond3` is false the call C5 never happened and no value is created. The same reasoning also applies to call C6 and C7.
 
 === Backward analysis
-TODO: text
+TODO:
+
+Examples
+
+
+#let transferFuncName(name, body) = {
+  let evalbracket = evalbracket.with(sub:name)
+  let evalentry = evalentry.with(sub:name)
+  let evalexit = evalexit.with(sub:name)
+
+  body
+}
+
+#[
+#let evalbracket = evalbracket.with(sub:"UA")
+#let evalentry = evalentry.with(sub:"UA")
+#let evalexit = evalexit.with(sub:"UA")
+
+$
+  "Ref" &= "LocalVars" union "ExprLabel"\
+  "CR" &= { f | f in "ExprLabel" and lbl(f) = mono("create") }\
+$
+Lattices
+
+$
+  U &= "OrderLat"(angles(lr(bot, "UT", top))) \
+  S &= "MapLat"("Ref" -> U) \
+  evalbracket("_") &:: "Node" -> S\
+$
+
+Transfer function:
+$
+  &evalexit(mono("exit")) &&= { x |-> top | x in "Ref" without "CR" } union { f |-> bot | f in "CR" } \
+  &evalexit(p) &&= join.big_(q in "succ"(p)) evalentry(q) \
+  &evalentry(mono("p: x :=" lbl(e))) &&= spx[e |-> spx(e) meet spx(x)][x |-> top]\
+  &evalentry(mono("p:" lbl(e) "= x")) &&= spx[x |-> s(x) meet s(e)]\
+
+  &evalentry(mono("p:" lbl(e) = lbl(f)())) &&= spx[f |-> spx(e) | lbl(f) = mono("create")]\
+
+  &evalentry(mono("p:" lbl(e) = lbl(f)(lbl(a)))) &&= spx[a |-> "UT" | lbl(f) = mono("utilize")]\
+
+  &evalentry(p) &&= evalexit(p)\ \
+
+  &"given" s_p^circle.small.filled = evalexit(p).
+
+  // &evalentry(mono("p: return" lbl(e))) = evalexit(p)[lbl(e) -> lbl(e) meet "RT"]\
+
+    // &evalentry(mono("p: ")lbl(e) = lbl(f)(lbl(a_1), ..., lbl(a_n) )) = (
+  //   "UseFV" compose "UseArgs" compose "UpdateCall"
+  // )(evalexit(p)) \
+  //   & quad "where:" \
+  //   & quad "UpdateCall"(s) = s[lbl(f) -> s(lbl(e))]\
+  //   & quad "UseArgs"(s) = s[a_i -> "UT" | i in "UtilParam"(f)] \
+  //   & quad "UseFV"(s) = s[x -> "UT" | x in "UtilFV"(f)] \
+  // &\
+$
+]
+
+Analysis result
+
+$
+  "Warnings" = {f | f in "CR" and evalentry(mono("start"))(f) leqsq.not "UT" } \
+  // &"If F is a local function:"\
+  // &"UtilParams(F)" = { "index"(v) | v in "Params" and evalentry(mono("start"))(f) leqsq "UT" }\
+  // &"UtilFV(F)" = { v | v in "FV" and evalentry(mono("start"))(f) leqsq "UT" }\
+$
+
 
 === Forward analysis
-TODO: text
+TODO:
 
+#[ /* Start of Safely Reachable Value */
+#let evalbracket = evalbracket.with(sub:"RV")
+#let evalentry = evalentry.with(sub:"RV")
+#let evalexit = evalexit.with(sub:"RV")
+#let ope = $o_p^circle.small$
+#let rpe = $r_p^circle.small$
+
+Safely reachable value analysis
+$
+  &"Ref" &&= "LocalVars" union "ExprLabel"\
+  &"CR" &&= { f | f in "ExprLabel" and lbl(f) = mono("create") }\
+$
+
+Lattices
+$
+  &"VarAt" &&= {(x, p) | x in "LocalVars", p in "Node"}\
+  &R &&= (powerset("VarAt" union "CR"), subset.eq)\
+  &O &&= (powerset("CR"), subset.eq)\
+  &S &&= "MapLat"("Ref" -> (R, O))\
+  &evalbracket("_") &&:: "Node" -> S\
+$
+
+Transfer functions, given $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x) $
+$
+  &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "CR" } union {f |-> ({f}, emptyset) | f in "CR"} \
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+$
+
+$
+  &evalexit(mono("p:" lbl(e) = lbl(f)())) &&= sp[e |-> ({f}, emptyset) | lbl(f) = mono("create")]\
+  &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> ({ (x, p) }, emptyset) ]\
+
+  &evalexit(mono("p:" x := lbl(e))) &&= sp[x |-> (rpe(e), ope(x) union (rpe (e) sect "CR" )) ]\
+  &evalexit(p) &&= evalentry(p)\
+  \
+$ <eq:RVTransferFunc>
+
+
+Safely reachable references and source calls
+
+// $"SafeRef" :: "Node" times "LocalVars" -> R$,
+// $"Source" :: "Node" times "LocalVars" -> {"CR"}$
+
+$
+  &"SafeReach"(p, e) &&= cases(
+    r_e & "if" abs(r_e) <= 1,
+    (r_e sect "CR") without o_e& "otherwise"
+  )\
+  &&&"where" (r_e, o_e) = evalexit(p)(e)\
+
+  &"Source"(p, e) &&= cases(
+    "Source"(p', x) & "if" sigma = {(x, p')},
+    sigma & "otherwise"
+  )\
+  &&&"where" sigma = "SafeReach"(p, e)
+$
+] /* End of Safely Reachable Value */
+
+
+TODO: examples
+
+
+
+#[
+#let evalbracket = evalbracket.with(sub:"UA")
+#let evalentry = evalentry.with(sub:"UA")
+#let evalexit = evalexit.with(sub:"UA")
+
+Utilization analysis
+
+Lattice (same as backward)
+$
+  U = "OrderLat"(angles(lr(bot, "UT", top))) \
+  S = "MapLat"("Ref" -> U) \
+  evalbracket("_") :: "Node" -> S\
+$
+
+
+Transfer function
+$
+  &evalentry(mono("start")) &&= { x |-> top | x in "Ref" without "CR" } union { f |-> bot | f in "CR" }\
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+
+  &evalexit(mono("p:" lbl(e) = mono("create")^f"()")) &&= sp[f |-> top, e |-> top]\
+
+  &evalexit(mono("p:" lbl(e) = mono("utilize")^f (lbl(a)))) &&= sp[a' |-> "UT" | a' in "Source"(p, a)]\
+
+  &evalexit(p) &&= evalentry(p)\ \
+
+  &"given" sp = evalentry(p).
+$
+]
+
+
+Analysis result, warning = ${f | f in "CR" and evalentry(mono("start"))(f) leqsq.not "UT" }$
 == Generalizing function calls
-TODO: text
+TODO: defining behaviors
 
 - function alias analysis
 
+(in appendix?)
+
+#[ /* Start of Function Alias Analysis */
+#let evalbracket = evalbracket.with(sub:"FA")
+#let evalentry = evalentry.with(sub:"FA")
+#let evalexit = evalexit.with(sub:"FA")
+#let ope = $o_p^circle.small$
+#let rpe = $r_p^circle.small$
+
+Function alias analysis
+$
+  &"Ref" &&= "LocalVars" union "ExprLabel"\
+  &"Func" &&= {"Set of function declarations"}\
+$
+
+Lattices
+$
+  &F &&= "FlatLat"("Func")\
+  &S &&= "MapLat"("Ref" -> F)\
+  &evalbracket("_") &&:: "Node" -> S\
+$
+
+Transfer functions, given $sp = evalentry(p)$,
+$
+  &evalentry(mono("start")) &&= { e |-> bot | e in "Ref"} \
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+$
+
+$
+
+  &evalexit(mono("p:" lbl(e) = "f") | f in "Func") &&= sp[e |-> f ]\
+  &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> sp(x) ]\
+  &evalexit(mono("p:" lbl(e) = lambda.{...})) &&= sp[e |-> lambda ]\
+  &evalexit(mono("p:" lbl(e) = lbl(f)(...))) &&= sp[e |-> top ]\
+
+  &evalexit(mono("p:" x := lbl(e))) &&= sp[x |-> sp(e)]\
+  &evalexit(p) &&= evalentry(p)\
+  \
+$
+
+Resolve function alias: $"Resolve"(p, e) = evalexit(p)(e)$, $"Resolve"::"Node" times "Ref" -> ("Func" + bot + top)$
+] /* End of Function Alias Analysis */
+
+We also want the analysis to track utilizable values returned from any function calls, and not only from $mono("create")$ calls. To allow this, we need to modify the transfer function of the safely-reachable value analysis defined in @eq:RVTransferFunc as follows.
+
+$
+  "Replace the equation:"\
+  evalexit(sub:"RV", mono("p:" lbl(e) = lbl(f)())) = sp[e |-> ({f}, emptyset) | lbl(f) = mono("create")]\
+
+  "With this equation:"\
+  evalexit(sub:"RV", mono("p:" lbl(e) = lbl(f) (...))) = sp[e |-> ({f}, emptyset) | "RetType"(lbl(f)) "is Utilizable"]\
+$ <eq:RVModifyCreateFunc>
+
+TODO: The complete modification is provided in Appendix ...
+
+#let ann(body) = $angle.l.double body angle.r.double$
+#let ef = math.accent("e", math.hat)
+#let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
+
 === Utilization function signature
 TODO: text
+
+A function type can be annotated with utilization effects after the return type,
+such as
+
+$f :: ann(omega_1) t_1 ->^(epsilon_1)_(theta_1) ... ->^(epsilon_(n-1))_(theta_(n-1)) ann(omega_n) t_n ->^(epsilon_n)_(theta_n) t_ret$
+
+$f ::(ann(omega_1)t_1,...,ann(omega_n) t_n) -> t_ret andef angles(lr((epsilon_1, ..., epsilon_n), Theta))$, where $Theta = union.big theta_i = {v |-> epsilon_v | v in "FV"(f)}$
+
 
 === DFA with signature
 TODO: text
@@ -150,43 +383,6 @@ Analyze(F, UpperAlias):
   S := UtilPerNode[start]
   return (Warnings + GenWarning(S), GenUtilParam(S), GenUtilFV(S))
 ```
-
-Transfer function:
-
-$
-  &evalexit(mono("exit")) = { x -> top | x in R without C } union { f -> bot | f in C } \
-  &evalexit(p) = join.big_(q in "succ"(p)) evalentry(q) \
-  &evalentry(mono("p: x :=" lbl(e))) = s[lbl(e) -> s(lbl(e)) meet s(x), x -> top], "where" s = evalexit(p) \
-  &evalentry(mono("p:" lbl(e) "= f") | mono(f) in C) = s[f ->s(lbl(e))], "where" s = evalexit(p)\
-  &evalentry(mono("p:" lbl(e) "= x")) = s[x -> s(x) meet s(lbl(e))], "where" s = evalexit(p)\
-  &evalentry(mono("p: ")lbl(e) = lbl(f)(lbl(a_1), ..., lbl(a_n) )) = (
-    "UseFV" compose "UseArgs" compose "UpdateCall"
-  )(evalexit(p)) \
-    & quad "where:" \
-    & quad "UpdateCall"(s) = s[lbl(f) -> s(lbl(e))]\
-    & quad "UseArgs"(s) = s[a_i -> "UT" | i in "UtilParam"(f)] \
-    & quad "UseFV"(s) = s[x -> "UT" | x in "UtilFV"(f)] \
-  &\
-
-  &evalentry(mono("p: return" lbl(e))) = evalexit(p)[lbl(e) -> lbl(e) meet "RT"]\
-  &evalentry(p) = evalexit(p)
-$
-
-
-Analysis result
-
-$
-  &"Warnings" = {f | f in C and evalentry(mono("start"))(f) leqsq.not "RT" } \
-  &"If F is a local function:"\
-  &"UtilParams(F)" = { "index"(v) | v in "Params" and evalentry(mono("start"))(f) leqsq "UT" }\
-  &"UtilFV(F)" = { v | v in "FV" and evalentry(mono("start"))(f) leqsq "UT" }\
-$
-
-#let ann(body) = $angle.l.double body angle.r.double$
-
-#let ef = math.accent("e", math.hat)
-
-#let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
 
 $E ::= U | N | I$
 

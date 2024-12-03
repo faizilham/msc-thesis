@@ -1,6 +1,10 @@
 #import "lib/template.typ": template, front-matter, main-matter, back-matter
 
-#show: template.with(author: "Your name")
+#show: template.with(
+  title: [Use it or Lose it: A Kotlin Static Analyzer for Identifying Unused Values],
+  author: "Faiz Ilham Muhammad",
+  keywords: ()
+)
 
 // #set pagebreak(weak: true)
 #set page(numbering: none)
@@ -11,7 +15,7 @@
 
 #include "head/abstract.typ"
 
-#outline(title: "Contents")
+#outline(title: "Contents", depth: 3)
 // #outline(title: "List of Figures", target: figure.where(kind: image))
 // #outline(title: "List of Tables", target: figure.where(kind: table))
 // #outline(title: "List of Listings", target: figure.where(kind: raw))
