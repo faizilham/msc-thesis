@@ -31,6 +31,18 @@
 
 #let orpair = $accent(or, arrow.l.r)$
 
+// effects
+#let ann(body) = $angle.l.double body angle.r.double$
+#let ef = math.accent("e", math.hat)
+#let Ef = math.accent("E", math.hat)
+#let efv = math.epsilon
+#let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
+#let plusef = math.plus.circle
+#let timesef = math.times.circle
+#let efs(l, r) = $#l union #r$
+// #let efl(..body) = $bracket #body.pos().join(",") bracket.r$
+#let efl(..body) = angles(..body)
+
 // Terms
 #let upar(f, i) = $"par"_(#f)^(#i)$
 #let ret = "ret"

@@ -136,6 +136,7 @@
     pagebreak()
 
     set text(size: 22pt)
+    set par(justify: false)
 
     if (not in-tail.get()) {
       // v(6%)

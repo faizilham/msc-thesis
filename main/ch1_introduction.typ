@@ -1,3 +1,5 @@
+#import "../lib/utilities.typ":*
+
 = Introduction
 
 TODO: modify
@@ -6,7 +8,35 @@ Programmers sometimes ignore the return value of a function call when writing a 
 
 Currently, the Kotlin compiler does not warn users about unused return values. In this proposed research, we explore unused return values analysis techniques that can be implemented in the Kotlin compiler, and the advantages and disadvantages of employing such techniques. We also examine cases of utilizable values, where they can only be deemed used if passed to a specific set of functions.
 
+- Definition of utilization
+- Examples
+- Contributions of research
 
+#listing("Utilization example")[
+```kt
+suspend fun sums(): Int = coroutineScope {
+    val one = async { 1 }    // no warning
+    val two = async { 2 }    // no warning
+    val three = async { 3 }  // warning, incomplete utilization
+    var sum = one.await()
+
+    if (sum > 1) {
+        sum += two.await() + three.await()
+    } else {
+        two.cancel()
+        // we forget to cancel or await three here
+    }
+
+    sum
+}
+
+fun asyncFour(scope: CoroutineScope) : Deferred<Int> {
+    val four = scope.async { 4 } // no warning because it escapes the function
+    return four
+}
+```]
+
+/*
 == Basic intuitions and desirable properties
 
 We first describe the basic intuitions about the problem and the properties we desire from the analysis. In most cases, the return values of function calls should be used in an expression or assigned to a variable. We shall call these functions having a must-use obligation. This is the default usage obligation because ignoring the return value is usually a mistake. A major exception to the must-use obligation is if the returned value is a unit-type value, as it is cumbersome if the compiler requires users to use unit values.
@@ -195,7 +225,6 @@ Based on the challenges we have identified, we formulate three research question
     + How does the unused return value analysis be implemented in the existing Kotlin compiler infrastructure?
     + How accurate is the unused return value analysis in terms of false positives and negatives when applied to existing Kotlin code bases?
 
-/*
-
 
 *
+*/
