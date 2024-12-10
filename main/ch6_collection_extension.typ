@@ -29,6 +29,7 @@ $
   "utilizeAll" :: (C[a]) -> () andef efl(U)\
   "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef efs(efl(efv), theta)) -> C[b] andef efs(efl(efv, N), theta)\
   "add" :: (C[a], a) -> () andef efl(I, U)\
+  "add" :: (ann(omega)C[a], ann(omega) a) -> () andef efl(N, U)\
   "remove" :: (ann(1) C[a], a) -> ()\
   "filter" :: (ann(1) C[a], (a)-> "Bool" andef efs(efl(efv), theta)) -> C[a] andef efs(efl(efv, N), theta)\
 $

@@ -78,6 +78,8 @@ $wide "let" ::(a, (a) -> b andef efs(efl(efv), theta)) -> b andef efs(efl(efv, N
 #let evalbracket = evalbracket.with(sub:"FA")
 #let evalentry = evalentry.with(sub:"FA")
 #let evalexit = evalexit.with(sub:"FA")
+#let ope = $o_p^circle.small$
+#let rpe = $r_p^circle.small$
 
 Function alias analysis
 $
@@ -136,17 +138,48 @@ $
   &"Src" &&= "Cons" union "NonLocal"\
 $
 
+#[ /* Start of Function Alias Analysis */
+#let evalbracket = evalbracket.with(sub:"RV")
+#let evalentry = evalentry.with(sub:"RV")
+#let evalexit = evalexit.with(sub:"RV")
+#let ope = $o_p^circle.small$
+#let rpe = $r_p^circle.small$
+
 We also need to modify the transfer function of the safely-reachable value analysis defined in @eq:RVTransferFunc as follows.
 
+Lattices
 $
-  "Replace the equation:"\
-  evalexit(sub:"RV", mono("p:" lbl(e) = lbl(f)())) = sp[e |-> ({f}, emptyset) | lbl(f) = mono("create")]\
+  &"VarAt" &&= {(x, p) | x in "LocalVars", p in "Node"}\
+  &R &&= (powerset("VarAt" union "Src"), subset.eq)\
+  &O &&= (powerset("Cons"), subset.eq)\
+  &S &&= "MapLat"("Ref" -> (R, O))\
+  &evalbracket("_") &&:: "Node" -> S\
+$
 
-  "With this equation:"\
-  evalexit(sub:"RV", mono("p:" lbl(e) = lbl(f) (...))) = sp[e |-> ({f}, emptyset) | "RetType"(lbl(f)) "is Utilizable"]\
-$ <eq:RVModifyCreateFunc>
+$
+  &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "Cons" } union {f |-> ({f}, emptyset) | f in "Cons"} \
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 
-TODO: The complete modification is provided in Appendix ...
+  &evalexit(mono("p:" lbl(e) = lbl(f) (...))) &&= sp[e |-> ({f}, emptyset) | "RetType"(lbl(f)) "is Utilizable"]\
+  &evalexit(mono("p:" lbl(e) = x)) &&= cases(
+    sp[e |-> ({ (x, p) }, emptyset) ] &"if" x in "LocalVars",
+    sp[e |-> ({x}, emptyset)] &"otherwise"
+  )\
+
+  &evalexit(mono("p: var" x := lbl(e))) &&=
+    sp[x |-> (rpe(e), ope(x) union (rpe (e) sect "Cons" )) ]\
+
+  &evalexit(mono("p:" x := lbl(e))) &&= cases(
+    sp[x |-> (rpe(e), ope(x) union (rpe (e) sect "Cons" )) ] &"if" x in "LocalVars",
+    "error"& "otherwise"
+  )\
+  &evalexit(p) &&= evalentry(p)\
+  \
+$
+
+given $sp = evalentry(p)$, $(rpe(x), ope(x)) = sp(x)$
+
+]
 
 #[ /* Start of Utilization Analysis with Signature */
 #let evalbracket = evalbracket.with(sub:"UA")
@@ -156,17 +189,19 @@ TODO: The complete modification is provided in Appendix ...
 Lattice
 
 $
-  &U &&= "OrderLat"(angles(bot, "UT", top)) \
-  &S &&= "MapLat"("Ref" -> U) \
+  // &U &&= "OrderLat"(angles(bot, "UT", top)) \
+  &U &&= "FlatLat"({0, 1}) \
+  &S &&= "MapLat"("Src" -> U) \
   &evalbracket("_") &&:: "Node" -> S\
 $
 
 Transfer function, given $sp = evalentry(p)$,
 
 $
-  &evalentry(mono("start")) &&= { x |-> top | x in "Ref" without "Cons" } union { f |-> bot | f in "Cons" }\
+  &evalentry(mono("start")) &&= { x |-> top | x in "NonLocal" } union { f |-> bot | f in "Cons" }\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
-
+$
+$
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp)\
   &wide "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> top | "RetType"(phi) "is Utilizable"]\
@@ -197,10 +232,17 @@ $
 //     ) \
 // $
 
+$
+  "Apply"(u, ef) &= cases(
+    1 "," &"if" ef = U,
+    u "," &"if" ef = N,
+    0 "," &"if" ef = I,
+  )\
+$
 
 Instance($t_f$, $(a_1, .., a_n)$) $:: ("Sign", ("Expr"...)) -> "Sign"$
 + Take all effect variables in $Ef$ and $Theta$ as env $Gamma = {epsilon -> emptyset}$
-+ For each $a_i$ with function type $tau_i$, UnifyType($Gamma, t_i,  tau_i$), resulting in $Gamma_i$
++ For each $a_i = {g}$ with function type $t_g$, UnifyType($Gamma, t_i,  t_g$), resulting in $Gamma_i$
 + Return: $t_f$ with effect variables replaced using $"combine"(union.big Gamma_i)$
 
 $"combine"(Gamma) = { epsilon -> ef_1 timesef .. timesef ef_n | epsilon in Gamma, {ef_1, .., ef_n} = Gamma(epsilon)}$
