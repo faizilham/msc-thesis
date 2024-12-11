@@ -167,10 +167,10 @@ $
   )\
 
   &evalexit(mono("p: var" x := lbl(e))) &&=
-    sp[x |-> (rpe(e), ope(x) union (rpe (e) sect "Cons" )) ]\
+    sp[x |-> (rpe(e), emptyset) ]\
 
   &evalexit(mono("p:" x := lbl(e))) &&= cases(
-    sp[x |-> (rpe(e), ope(x) union (rpe (e) sect "Cons" )) ] &"if" x in "LocalVars",
+    sp[x |-> (rpe(e), ope(x) union (rpe (x) sect "Cons" )) ] &"if" x in "LocalVars",
     "error"& "otherwise"
   )\
   &evalexit(p) &&= evalentry(p)\
