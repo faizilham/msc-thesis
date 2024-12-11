@@ -72,7 +72,8 @@ $
 $ <eq:BackwardPreFunc>
 
 The next case is the variable access expression `$e = x`, where the utilization of expression label $e$ is propagated to variable $x$. We use meet operation to make sure that if $x$ is already utilized in the current path, it should remain so. The last cases are the variable declaration and assignment `(var) x := $e`. It is quite similar with the variable access expression, but with resetting the utilization of $x$ to $top$. This is because any values assigned prior to this node is "hidden" by the current assignment and cannot be traced to any future `utilize`, therefore the utilization status is unknown.
-After the constraints reaches a fixpoint, the analysis can return back as a warning the set of call sites that are not guaranteed to be utilized at starting point.
+
+The analysis runs for a single pass of constraint evaluations. This means a loop will be analyzed like an if statement, that is either the loop never runs or runs exactly once. For the utilization analysis purpose, this is already close enough to a fixpoint since utilization cases for singular values (i.e. not a list or a collection) inside loops are quite rare and can be regarded as an error. We will discuss handling collections of utilizable values later. Based on the program state at function start, the analysis produces the set of warnings as follows.
 
 $
   "Warnings" = {f | f in "Cons" and evalentry(mono("start"))(f) leqsq.not "UT" }
@@ -231,7 +232,7 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:ForwardUtil>
 
-There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After reaching a fixpoint, the analysis can report the warning based on the utilization status at exit nodes.
+There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After a single pass of constraints evaluations, the analysis can report the warning based on the utilization status at exit nodes.
 
 $
 "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not "UT" }
