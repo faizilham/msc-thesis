@@ -168,7 +168,7 @@ $
 As for the post-execution constraints, there are four main cases, which are construction calls, variable access expressions, variable declarations, and assignments.
 
 $
-  &evalexit(mono("p:" lbl(e) = lbl(f)())) &&= sp[e |-> ({f}, emptyset) | lbl(f) = mono("create")]\
+  &evalexit(mono("p:" lbl(e) = lbl(f)())) &&= sp[e |-> ({f}, emptyset) | f in "Cons"]\
   &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> ({ (x, p) }, emptyset) ]\
 
   &evalexit(mono("p: var" x := lbl(e))) &&= sp[x |-> (rpe(e), emptyset) ]\

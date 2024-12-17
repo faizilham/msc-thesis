@@ -3,7 +3,7 @@
 
 = Generalized Utilization Analysis
 
-While the simplified model of the problem is useful as a starting point, in practice we require a more sophisticated model. In this chapter we generalize the simple model so that the analysis can handle any functions instead of just `create` and `utilize`.
+While the simplified model of the problem is useful as a starting point, in practice we require a more sophisticated model. In this chapter we generalize the forward analysis of the simplified model to include all functions other than `create` and `utilize`.
 
 We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
@@ -140,8 +140,6 @@ The constraint functions are quite similar to the reachable definitions analysis
 
 We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise it returns the function type without utilization effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
-
-
 $
   &"ResolveSign"(p, e) &&= cases(
     "signature"(f) & f in "Func",
@@ -154,40 +152,47 @@ $ <eq:ResolveSign>
 
 == Modifying the safely reachable values analysis
 
----
-
-We also want the analysis to track utilizable values returned from any function calls, and not only from `create` calls.
-
-$
-  &"Cons" &&= { f | f in "ExprLabel" and "RetType"(lbl(f)) "is Utilizable" }\
-  &"NonLocal" &&= "Params" union "FV"\
-  &"Ref" &&= "LocalVars" union "ExprLabel" union "NonLocal"\
-  &"Src" &&= "Cons" union "NonLocal"\
-$
-
-#[ /* Start of Function Alias Analysis */
+#[ /* Start of Reachable Value Analysis Modified */
 #let evalbracket = evalbracket.with(sub:"RV")
 #let evalentry = evalentry.with(sub:"RV")
 #let evalexit = evalexit.with(sub:"RV")
 #let ope = $o_p^circle.small$
 #let rpe = $r_p^circle.small$
 
-We also need to modify the transfer function of the safely-reachable value analysis defined in @eq:RVTransferFunc as follows.
+In the simplified model, we only care about the utilization of values created inside the function, since we assume functions other than `create` and `utilize` do not create new values or have any effects. Since now any functions may have effects on its arguments or free variables, we also need to track the utilization of those values.
 
-Lattices
+In addition to LocalVars and ExprLabel, we now also assume each functions to have the set of parameters Param and the set of free variables FV. We redefine the set of construction calls Cons as the set of function calls which return utilizable types. We also define the set of utilizable values from non-local sources, which are the function parameters and free variables. The set Src is the set of utilizable values sources, which are construction calls and non-local sources.
 $
-  &"VarAt" &&= {(x, p) | x in "LocalVars", p in "Node"}\
+  &"Ref" &&= "LocalVars" union "ExprLabel" union "NonLocal" \
+  &"Cons" &&= { f | f in "ExprLabel" and "RetType"(lbl(f)) "is Utilizable" }\
+  &"NonLocal" &&= "Params" union "FV"\
+  &"Src" &&= "Cons" union "NonLocal"\
+  &"VarAt" &&= {(x, p) | x in "LocalVars", p in "Node"}
+$
+
+We can then define the lattices used in the analysis as @eq:RVLatticeModified. The main difference is that the reachable values lattice $R$ also includes NonLocal through the Src set, instead of just VarAt and Cons.
+
+$
+  &\
   &R &&= (powerset("VarAt" union "Src"), subset.eq)\
   &O &&= (powerset("Cons"), subset.eq)\
   &S &&= "MapLat"("Ref" -> (R, O))\
-  &evalbracket("_") &&:: "Node" -> S\
-$
+$ <eq:RVLatticeModified>
+
+We can then update the constraint functions $evalbracket("_") : "Node" -> S$, starting with the pre-execution constraints as defined in @eq:RVPreExecConstraintModified. The main difference here is we set the initial reachable values for non-local sources to the singleton set of itself.
 
 $
-  &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "Cons" } union {f |-> ({f}, emptyset) | f in "Cons"} \
-  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+  &evalentry(mono("start")) &&=
+    && { e |-> (emptyset, emptyset) | e in "Ref" without "Src" } \
+    &&&&& union {f |-> ({f}, emptyset) | f in "Cons"} \
+    &&&&& union {x |-> ({x}, emptyset) | x in "NonLocal"} \
+  &evalentry(p) &&= &&join.big_(q in "pred"(p)) evalexit(q) \
+$ <eq:RVPreExecConstraintModified>
 
-  &evalexit(mono("p:" lbl(e) = lbl(f) (...))) &&= sp[e |-> ({f}, emptyset) | "RetType"(lbl(f)) "is Utilizable"]\
+We also redefine the post-execution constraints in @eq:RVPostExecConstraintModified, given entrance state $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. The constraints are similar to the one in the simplified model, with the main difference when handling parameter and non-local variables. Since we require parameters and free variables to be immutable references, we report an error when there is a reassignment to them.
+
+$
+  &evalexit(mono("p:" lbl(e) = lbl(f) (...))) &&= sp[e |-> ({f}, emptyset) | f in "Cons"]\
   &evalexit(mono("p:" lbl(e) = x)) &&= cases(
     sp[e |-> ({ (x, p) }, emptyset) ] &"if" x in "LocalVars",
     sp[e |-> ({x}, emptyset)] &"otherwise"
@@ -201,12 +206,27 @@ $
     "error"& "otherwise"
   )\
   &evalexit(p) &&= evalentry(p)\
-  \
+
+$ <eq:RVPostExecConstraintModified>
+
+The definitions of SafeReach and Sources are not changed, but we include it here for convenience sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definitions. This means that references to parameters and free variables behave similarly to references of local variable, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
+$
+  &"SafeReach"(p, e) &&= cases(
+    r_e & "if" abs(r_e) <= 1,
+    (r_e sect "Cons") without o_e& "otherwise"
+  )\
+  &&&"where" (r_e, o_e) = evalexit(p)(e)\
+
+  &"Sources"(p, e) &&= cases(
+    "Sources"(p', x) & "if" sigma = {(x, p')},
+    sigma & "otherwise"
+  )\
+  &&&"where" sigma = "SafeReach"(p, e)
 $
 
-given $sp = evalentry(p)$, $(rpe(x), ope(x)) = sp(x)$
+] // End of Reachable Value Analysis Modified
 
-]
+== Utilization analysis with effects
 
 #[ /* Start of Utilization Analysis with Signature */
 #let evalbracket = evalbracket.with(sub:"UA")
