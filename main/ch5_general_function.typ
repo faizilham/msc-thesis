@@ -136,7 +136,7 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:FuncAliasConstraints>
 
-The constraint functions are quite similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also defaulted to $top$ since we currently do not handle function-returning functions.
+The constraint functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
 
 We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise it returns the function type without utilization effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
@@ -226,42 +226,83 @@ $
 
 ] // End of Reachable Value Analysis Modified
 
-== Utilization analysis with effects
+#pagebreak()
+
+== Utilization analysis with function effects
 
 #[ /* Start of Utilization Analysis with Signature */
 #let evalbracket = evalbracket.with(sub:"UA")
 #let evalentry = evalentry.with(sub:"UA")
 #let evalexit = evalexit.with(sub:"UA")
 
-Lattice
+We modify the forward analysis to handle function utilization effects. We first define the lattices for the data analysis as shown in @eq:UtilAnalysisLattices. The utilization status lattice $U$ is a powerset lattice of the set ${NU, UT}$, where $NU$ is not utilized and $UT$ is utilized. The abstract program state lattice $S$ is a map from a value source to the utilization status lattice.
 
 $
   // &U &&= "OrderLat"(angles(bot, "UT", top)) \
-  &U &&= "FlatLat"({0, 1}) \
+  &U &&= (powerset({NU, UT}), subset.eq) \
   &S &&= "MapLat"("Src" -> U) \
-  &evalbracket("_") &&:: "Node" -> S\
-$
+$ <eq:UtilAnalysisLattices>
 
-Transfer function, given $sp = evalentry(p)$,
+We then modify the constraint functions $evalbracket("_") : "Node" -> S$. The pre-execution constraints are trivial, as shown in @eq:UtilAnalysisConstraintGen1. Construction call sites are initialized to $bot$, while parameters and free variables are initialized to $top$ since we do not know its initial utilization.
 
 $
-  &evalentry(mono("start")) &&= { x |-> top | x in "NonLocal" } union { f |-> bot | f in "Cons" }\
+  &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" } union { x |-> top | x in "NonLocal" }\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+$ <eq:UtilAnalysisConstraintGen1>
+
+As for the post-execution constraints, there are only two main cases. The first case is returning a utilizable types, which is straightforward. We first resolve the safely-reachable values of the returned expression, and mark them as utilized.
+
 $
+  &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"]\
 $
-  &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp)\
-  &wide "where:"\
-  &wide "MarkCall(s)" &&= sp[e |-> top | "RetType"(phi) "is Utilizable"]\
-  &wide "MarkArgs(s)" &&= sp[c |-> "Apply"(s(c), ef_i) | c in a'_i and (i |-> ef_i) in Ef]\
-  &wide "MarkFV(s)" &&= sp[v |-> "Apply"(s(v), ef_v) | (v ->ef_v) in Theta]\
-  &wide phi andef (Ef union Theta) &&= "Instance"("ResolveSign"(p, f), (a'_1, .., a'_n))\
+
+The second main case is the constraint for function calls, defined in @eq:UtilAnalysisFuncCall. The constraint function for this case is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to the values of free variables.
+
+$
+  &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
+  &wide "MarkCall(s)" &&= sp[e |-> top | f in "Cons"]\
+  &wide "MarkArgs(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_i) | c in a'_i and (i |-> ef_i) in PiEf]\
+  &wide "MarkFV(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_v) | c in v' and (v ->ef_v) in PhiEf]\
+  &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (a'_1, .., a'_n))\
   &wide a'_i &&= "Sources"(p, a_i) "for each" i in [1..n]\
+  &wide v' &&= "Sources"(p, v) "given" v "a free variable of" f
+$ <eq:UtilAnalysisFuncCall>
 
-  &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> "UT" | c in "Sources"(p, e) ]\ \
+The analysis sets the utilization of the arguments and the free variables based on the function effects by using the ApplyEff function shown as follows.
 
-  &evalexit(p) &&= evalentry(p)\ \
+$
+"ApplyEff"(u, ef) = cases(
+    {UT} "," &"if" ef = EfU,
+    {NU} "," &"if" ef = EfI,
+    u "," &"if" ef = EfN,
+  )\
 $
 
+Before applying the effects, however, the analysis need to resolve the function signature using the ResolveSign function from the function alias analysis, and then instantiate the signature with the resolved arguments. The Instantiate function instantiates any parametric effects in the signature with the concrete effects of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
+
+As an example, suppose that we have higher-order functions `apply` and `applyU` with signatures shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
+
+$
+  &"apply"  &&: (A, (A) -> B andef efl(epsilon) union phiEf) -> B andef efl(epsilon) union phiEf\
+  &"applyU" &&: (A, (A) -> B andef efl(EfU) union phiEf) -> B andef efl(EfU) union phiEf\
+$ <eq:InstantiateExample1>
+
+Suppose that we also have the functions `f` and `g` that we are going to pass as an argument to `apply` and `applyU`. These functions have the following signatures:
+$
+  f : (A) -> B andef efl(EfU) union {x |-> EfI}\
+  g : (A) -> B andef efl(EfN) union {y |-> EfU}
+$
+
+The calls `apply(a,f)`, `apply(a,g)`, `applyU(a,f)`, and `applyU(a,g)` are then instantiated with the following signatures:
+
+$
+  &"Inst"("apply", (a, f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
+  &"Inst"("apply", (a, g)) &&= (A, A -> B andef efl(EfN) union {y |-> EfU}) -> B andef efl(EfU) union {y |-> EfU}\
+  &"Inst"("applyU", (a, f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
+  &"Inst"("applyU", (a, g)) &&= "Error"
+$
+
+As we can see in the example, the instantiations of `apply(a,f)` and `apply(a,g)` replace the parametric effects $epsilon$ and $phiEf$ with the effects of `f` and `g` accordingly. The instantiation of `applyU(a,f)` only replaces $phiEf$ since it is the only parametric effect in `applyU`. In contrast to the other calls, the instantiation of `applyU(a,g)` results in an error since the required effect signature #box($(A) -> B andef efl(EfU) union phiEf$) is not fulfilled by `g`, which has the effect $EfN$ for its first parameter.
 // $
 //   &evalentry(mono("p: ")lbl(e) = lbl(f)(lbl(a_1), ..., lbl(a_n) )) = (
 //     "MarkFV" compose "MarkArgs" compose "UpdateCall"
@@ -280,11 +321,7 @@ $
 // $
 
 $
-  "Apply"(u, ef) &= cases(
-    1 "," &"if" ef = U,
-    u "," &"if" ef = N,
-    0 "," &"if" ef = I,
-  )\
+
 $
 
 Instance($t_f$, $(a_1, .., a_n)$) $:: ("Sign", ("Expr"...)) -> "Sign"$
@@ -315,12 +352,13 @@ $
 
 Analysis result, utilization warning = ${f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not "UT" }$
 
+TODO: example
 
 == Inferencing lambda signature
 TODO: text
 
-- Given lambda $lambda$, the signature $(t_1, ..., t_n) -> t_ret andef Ef union Theta$ is inferred with:
-- $Ef = {i -> "U" | p_i in "Params"(lambda) and evalexit(mono("exit"))(p_i) leqsq "UT" }$
-- $Theta = {v -> "U" | v in "FV"(lambda) and evalexit(mono("exit"))(v) leqsq "UT" }$
+- Given lambda $lambda$, the signature $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf$ is inferred with:
+- $PiEf = {i -> "U" | p_i in "Params"(lambda) and evalexit(mono("exit"))(p_i) leqsq {UT} }$
+- $phiEf = {v -> "U" | v in "FV"(lambda) and evalexit(mono("exit"))(v) leqsq {UT} }$
 
 - limitation: parametric effect inference is not yet possible

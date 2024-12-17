@@ -45,6 +45,9 @@
 #let PhiEf = eff(sym.Phi)
 #let phiEf = eff(sym.phi)
 
+#let UT = 1 // math.accent("1", math.breve)
+#let NU = 0 // math.accent("0", math.breve)
+
 #let efv = math.epsilon
 #let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
 #let plusef = math.plus.circle

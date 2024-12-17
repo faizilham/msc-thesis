@@ -211,18 +211,18 @@ TODO: Prove: Given $sigma = "Sources"(p, e)$, if $abs(sigma) >=2$ then all $c in
 
 === Utilization analysis with safely-reachable values
 
-A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the same lattices as in the backward analysis.
+A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the similar lattices as in the backward analysis.
 
 $
   U = "OrderLat"(angles(bot, "UT", top)) \
-  S = "MapLat"("Ref" -> U) \
+  S = "MapLat"("Cons" -> U) \
 $
 
 
 The constraint functions $evalbracket("_") :: "Node" -> S$ are defined by @eq:ForwardUtil, given $sp = evalentry(p)$.
 
 $
-  &evalentry(mono("start")) &&= { x |-> top | x in "Ref" without "Cons" } union { f |-> bot | f in "Cons" }\
+  &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" }\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 
   &evalexit(mono("p:" lbl(e) = lbl(f)"()")) &&= sp[f |-> top, e |-> top | lbl(f) = mono("create")]\
