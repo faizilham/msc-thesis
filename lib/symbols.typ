@@ -33,8 +33,18 @@
 
 // effects
 #let ann(body) = $angle.l.double body angle.r.double$
+
+#let eff(x) = math.accent(x, math.hat)
+
 #let ef = math.accent("e", math.hat)
 #let Ef = math.accent("E", math.hat)
+#let EfU = math.accent("U", math.hat)
+#let EfI = math.accent("I", math.hat)
+#let EfN = math.accent("N", math.hat)
+#let PiEf = eff(sym.Pi)
+#let PhiEf = eff(sym.Phi)
+#let phiEf = eff(sym.phi)
+
 #let efv = math.epsilon
 #let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
 #let plusef = math.plus.circle

@@ -3,76 +3,109 @@
 
 = Generalized Utilization Analysis
 
-TODO: defining behaviors
+While the simplified model of the problem is useful as a starting point, in practice we require a more sophisticated model. In this chapter we generalize the simple model so that the analysis can handle any functions instead of just `create` and `utilize`.
 
-functions can:
-- utilize any of its argument
-- returns a new utilizable values
-- in case of lambdas, utilize any of its free variable
-- invalidates argument or free variable
+We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
-Add example
+The `passThrough` function behavior is quite unintuitive at the first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
 
-== Utilization function signature
 
-TODO: text
+#listing("Top level functions utilization examples")[```kt
+fun utilizeTwo(a: Utilizable, b: Utilizable) { // Utilize a and b
+  utilize(a)
+  utilize(b)
+}
 
-Utilization Effect
+fun newUtilizable() : Utilizable { // Create a new utilizable
+  return create()
+}
 
-$E ::= U | N | I $
+// Utilize a, and "create" a new utilizable
+fun passThrough(a: Utilizable) : Utilizable {
+  return a
+}
+```] <lst:TopLevelUtilEx>
 
-where $U$ = Utilized, $N$ = Not changed, $I$ = Invalidated, with operators $(plusef, timesef)$ defined as follows.
+Lambda functions behave in a similar way to top-level functions, but one main difference is that lambda functions may also affect the utilization of its free variables, that is the variables declared on the higher-level scope than the lambda function's body. @lst:LambdaUtilEx shows the example of lambda functions effect on utilization. In the `testLambda` function, the lambda function assigned to variable `lam` uses its first argument and the free variable `b`. Therefore, the values in `a` and `b` are utilized after the `lam(a)` call.
+
+#listing("Lambda functions utilization examples")[```kt
+fun testLambda() {
+  val a = create() // OK
+  val b = create() // OK
+  val lam = { it -> utilize(it); utilize(b) } // utilize its arg and FV b
+  lam(a)
+}
+
+fun invalidateErr() {
+  var a = create() // mutable variable
+  val f = {
+    utilize(a)
+    a = create() // Err, even if it should be OK in this case
+  }
+
+  f()
+  utilize(a)
+}
+```] <lst:LambdaUtilEx>
+
+A lambda function may also change the values of mutable free variables, as shown in the `invalidateErr` function in the given example. We decide to regard any mutation of free variable by a lambda function as a possible error, and thus the example is reported as an error when it should be alright. This is because tracking the reference changes and values escapes through the free variables complicates the analysis too much, while in practice free-variable mutating lambda functions are rarely used.
+
+To complete our definition, we also allow functions to invalidate previously-utilized values into unutilized values. We define the primitive `unutilize` as a mirror to `utilize`. While invalidating utilization cases are quite rare, it is useful to have a complete definition with only few changes.
+
+
+== Utilization effects
+
+As we previously discussed, functions may affect the utilization of its arguments and free variables. We define the set of utilization effects $Ef$ in @eq:UtilEffects, where $EfU$ means it utilizes the value, $EfI$ means it invalidates the value's utilization, and $EfN$ means it does not affect the value.
 
 $
-  // ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
-  // ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
-  U plusef N = U", and" ef plusef I = I "for all" ef :: E\
-  U timesef N = N", and" ef timesef I = I "for all" ef :: E\
+  Ef = {EfU, EfI, EfN}
+$ <eq:UtilEffects>
+
+We then extend the function type signature after its return type with effect notations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
+
+$
+  f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\
+  "where"
+  PiEf = efl(ef_1, ..., ef_n) = {1 |-> ef_1, .., n |-> ef_n},\
+  wide quad PhiEf = {v |-> ef_v | v in "FV"(f)}
+$ <eq:FuncSignWithEffects>
+
+The functions previously shown in @lst:TopLevelUtilEx and the lambda function `lam` in @lst:LambdaUtilEx can be annotated as follows.
+
+$
+  "utilizeTwo" : ("Utilizable", "Utilizable") -> "Unit" andef efl(EfU, EfU)\
+  "newUtilizable" : () -> "Utilizable"\
+  "passThrough": ("Utilizable") -> "Utilizable" andef efl(EfU)\
+  "lam" : ("Utilizable") -> "Unit" andef efl(EfU) union {b |-> EfU}
 $
 
-Both operators obey idempotence ($ef circle ef = ef$) and commutative ($ef_1 circle ef_2 = ef_2 circle ef_1$) properties.
+Notice how `newUtilizable` does not have an effect since it only creates a new value, while `utilizeTwo` and `passThrough` only have effects on its parameters. In addition to the parameter effects, the lambda function `lam` also has the free variable effects.
 
-Operator $plusef$ indicates serial application of effect (one after another), while $timesef$ indicates choice or possible branching.
+=== Parametric utilization effect
 
-A function type can be annotated with utilization effects after the return type,
-such as
+Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply`, which simply applies its first argument to the function argument at second position, can be annotated as follows.
 
-// $f :: t_1 -->^angles(ef_1, theta_1) ... -->^angles(ef_(n-1),theta_(n-1)) t_n -->^angles(ef_n,theta_n) t_ret$
+$
+  "apply" : (A, (A) -> B andef efl(epsilon) union phiEf ) -> B andef efl(epsilon) union phiEf\
+  "apply"(x, f) = f(x)
+$ <eq:ApplySignature>
 
-$wide f ::(t_1,..., t_n) -> t_ret andef efs(Ef, Theta)$
+This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x` depends on the effect of `f` on its first parameter, which is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
 
-where $Ef = efl(ef_1, ..., ef_n) = {1 |-> ef_1, .., n |-> ef_n} , "and" Theta = {v |-> ef_v | v in "FV"(f)}$.
+// $
+//   // ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
+//   // ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
+//   U plusef N = U", and" ef plusef I = I "for all" ef :: E\
+//   U timesef N = N", and" ef timesef I = I "for all" ef :: E\
+// $
 
-This notation indicates that after the call of $f$, the effect $ef_i$ is applied to the value passed as $i$-th argument, and $ef_v$ is applied to free variable $v$.
+// Both operators obey idempotence ($ef circle ef = ef$) and commutative ($ef_1 circle ef_2 = ef_2 circle ef_1$) properties.
 
-A non-annotated function type is equivalent to having no effect to its arguments and free variables.
+// Operator $plusef$ indicates serial application of effect (one after another), while $timesef$ indicates choice or possible branching.
 
-$wide f ::(t_1,..., t_n) -> t_ret andef efs(efl(N, ..., N), {v |-> N | v in "FV"(f)})$
+== Function alias analysis
 
-Because many functions do not have free variables, it is often the case that $Theta = emptyset$. For convenience, we shorten the notation in such cases:
-
-$wide f ::(t_1,..., t_n) -> t_ret andef efl(ef_1, ..., ef_n)$
-
-
-For example, the function "`await(x: Deferred<t>): t`" can be notated as:
-
-$wide "await" :: ("Deferred"[t]) -> t andef efl(U)$
-
-Effect annotation can also be parametric, especially for higher order function. For example, the function "`let(x: a, f: a -> b): b`" can be notated as:
-
-$wide "let" ::(a, (a) -> b andef efs(efl(efv), theta)) -> b andef efs(efl(efv, N), theta)$
-
-// $f :: ann(omega_1) t_1 ->^(ef_1)_(theta_1) ... ->^(ef_(n-1))_(theta_(n-1)) ann(omega_n) t_n ->^(ef_n)_(theta_n) t_ret$
-
-
-// $f ::(ann(omega_1)t_1,...,ann(omega_n) t_n) -> t_ret andef angles((ef_1, ..., ef_n), Theta)$
-
-== Analysis with function signature
-
-
-- function alias analysis
-
-(in appendix?)
+Since in the generalized model any function call may create a new utilizable value or has some effects, we first need to determine which function is called and what is its effect signature before we can analyze the values utilizations. We can determine the function by running a function alias analysis, which is a reachable definition analysis modified for function type values.
 
 #[ /* Start of Function Alias Analysis */
 #let evalbracket = evalbracket.with(sub:"FA")
@@ -81,53 +114,47 @@ $wide "let" ::(a, (a) -> b andef efs(efl(efv), theta)) -> b andef efs(efl(efv, N
 #let ope = $o_p^circle.small$
 #let rpe = $r_p^circle.small$
 
-Function alias analysis
+We first define the set of references Ref and the set of function declarations Func. Based on these sets, we also define the flat lattice of function declarations $F$ and the abstract state $S$, which is a map lattice of references to function declarations.
+
 $
   &"Ref" &&= "LocalVars" union "ExprLabel"\
-  &"Func" &&= {"Set of function declarations"}\
-$
-
-Lattices
-$
+  &"Func" &&= {"Set of top-level and lambda function declarations"}\
   &F &&= "FlatLat"("Func")\
   &S &&= "MapLat"("Ref" -> F)\
-  &evalbracket("_") &&:: "Node" -> S\
 $
 
-Transfer functions, given $sp = evalentry(p)$,
+We define the constraint functions $evalbracket("_") : "Node" -> S$ for the data flow analysis in @eq:FuncAliasConstraints, given the previous state notation $sp = evalentry(p)$.
 $
   &evalentry(mono("start")) &&= { e |-> bot | e in "Ref"} \
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
-$
-
-$
-
-  &evalexit(mono("p:" lbl(e) = "f") | f in "Func") &&= sp[e |-> f ]\
+  &evalexit(mono("p:" lbl(e) = "f")) &&= sp[e |-> f | f in "Func"]\
   &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> sp(x) ]\
   &evalexit(mono("p:" lbl(e) = lambda.{...})) &&= sp[e |-> lambda ]\
   &evalexit(mono("p:" lbl(e) = lbl(f)(...))) &&= sp[e |-> top ]\
 
   &evalexit(mono("p:" x := lbl(e))) &&= sp[x |-> sp(e)]\
   &evalexit(p) &&= evalentry(p)\
-  \
-$
+$ <eq:FuncAliasConstraints>
 
-Resolve function alias: $$, $$
-$
-  &"Resolve" &&:: "Node" times "Ref" -> ("Func" + bot + top)\
-  &"Resolve"(p, e) &&= evalexit(p)(e)
-$
+The constraint functions are quite similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also defaulted to $top$ since we currently do not handle function-returning functions.
+
+We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise it returns the function type without utilization effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
+
+
 
 $
-  &"ResolveSign" &&:: "Node" times "Ref" -> "Sign"\
   &"ResolveSign"(p, e) &&= cases(
-    (t_1, .., t_n) -> t_ret "if" f in {top, bot},
-    (t_1 sigma_1, .., t_n sigma_n) -> t_ret sigma
+    "signature"(f) & f in "Func",
+    tau_f andef emptyset & "otherwise",
   )\
-  &&& "where" f = evalexit(p)(e), "type"(lbl(e)) = (t_1, .., t_n) -> t_ret\
-$
+  &&& "where" f = evalexit(p)(e), "type"(lbl(e)) = tau_f\
+$ <eq:ResolveSign>
 
 ] /* End of Function Alias Analysis */
+
+== Modifying the safely reachable values analysis
+
+---
 
 We also want the analysis to track utilizable values returned from any function calls, and not only from `create` calls.
 
