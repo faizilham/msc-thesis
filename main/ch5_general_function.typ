@@ -92,6 +92,8 @@ $ <eq:ApplySignature>
 
 This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x` depends on the effect of `f` on its first parameter, which is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
 
+// TODO: - Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
+
 // $
 //   // ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
 //   // ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
@@ -173,7 +175,6 @@ $
 We can then define the lattices used in the analysis as @eq:RVLatticeModified. The main difference is that the reachable values lattice $R$ also includes NonLocal through the Src set, instead of just VarAt and Cons.
 
 $
-  &\
   &R &&= (powerset("VarAt" union "Src"), subset.eq)\
   &O &&= (powerset("Cons"), subset.eq)\
   &S &&= "MapLat"("Ref" -> (R, O))\
@@ -250,21 +251,22 @@ $
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 $ <eq:UtilAnalysisConstraintGen1>
 
-As for the post-execution constraints, there are only two main cases. The first case is returning a utilizable types, which is straightforward. We first resolve the safely-reachable values of the returned expression, and mark them as utilized.
+As for the post-execution constraints, there are only two main cases. The first case is returning a utilizable types, in which we mark the safely-reachable values of the returned expression as utilized.
 
 $
   &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"]\
 $
 
-The second main case is the constraint for function calls, defined in @eq:UtilAnalysisFuncCall. The constraint function for this case is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to the values of free variables.
+The second main case is the constraint for function calls, defined in @eq:UtilAnalysisFuncCall. The constraint is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to free variables.
 
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> top | f in "Cons"]\
   &wide "MarkArgs(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_i) | c in a'_i and (i |-> ef_i) in PiEf]\
   &wide "MarkFV(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_v) | c in v' and (v ->ef_v) in PhiEf]\
-  &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (a'_1, .., a'_n))\
-  &wide a'_i &&= "Sources"(p, a_i) "for each" i in [1..n]\
+  &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n))\
+  &wide alpha_i &&= "ResolveSign"(p, a_i) "for each arg" a_i "that is a function ref" \
+  &wide a'_i &&= "Sources"(p, a_i) "for each arg" a_i \
   &wide v' &&= "Sources"(p, v) "given" v "a free variable of" f
 $ <eq:UtilAnalysisFuncCall>
 
@@ -278,9 +280,14 @@ $
   )\
 $
 
-Before applying the effects, however, the analysis need to resolve the function signature using the ResolveSign function from the function alias analysis, and then instantiate the signature with the resolved arguments. The Instantiate function instantiates any parametric effects in the signature with the concrete effects of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
+=== Instantiating function signatures
+
+Before applying the effects, however, the analysis need to resolve the function signature using the ResolveSign function from the function alias analysis, and then instantiate the signature with the resolved arguments. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
 
 As an example, suppose that we have higher-order functions `apply` and `applyU` with signatures shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
+#[
+// Temporarily decrease block spacing here
+#show math.equation.where(block: true): set block(spacing: 1.25em)
 
 $
   &"apply"  &&: (A, (A) -> B andef efl(epsilon) union phiEf) -> B andef efl(epsilon) union phiEf\
@@ -293,72 +300,114 @@ $
   g : (A) -> B andef efl(EfN) union {y |-> EfU}
 $
 
-The calls `apply(a,f)`, `apply(a,g)`, `applyU(a,f)`, and `applyU(a,g)` are then instantiated with the following signatures:
+The calls `apply(a,f)`, `apply(a,g)`, `applyU(a,f)`, and `applyU(a,g)` are then instantiated as follows given $sigma_f$ and $sigma_g$ the signatures of `f` and `g`:
 
 $
-  &"Inst"("apply", (a, f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
-  &"Inst"("apply", (a, g)) &&= (A, A -> B andef efl(EfN) union {y |-> EfU}) -> B andef efl(EfU) union {y |-> EfU}\
-  &"Inst"("applyU", (a, f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
-  &"Inst"("applyU", (a, g)) &&= "Error"
+  &"Inst"("apply", (sigma_f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
+  &"Inst"("apply", (sigma_g)) &&= (A, A -> B andef efl(EfN) union {y |-> EfU}) -> B andef efl(EfU) union {y |-> EfU}\
+  &"Inst"("applyU", (sigma_f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
+  &"Inst"("applyU", (sigma_g)) &&= "Error"
 $
+]
+
+#let unify = math.cal("U")
 
 As we can see in the example, the instantiations of `apply(a,f)` and `apply(a,g)` replace the parametric effects $epsilon$ and $phiEf$ with the effects of `f` and `g` accordingly. The instantiation of `applyU(a,f)` only replaces $phiEf$ since it is the only parametric effect in `applyU`. In contrast to the other calls, the instantiation of `applyU(a,g)` results in an error since the required effect signature #box($(A) -> B andef efl(EfU) union phiEf$) is not fulfilled by `g`, which has the effect $EfN$ for its first parameter.
-// $
-//   &evalentry(mono("p: ")lbl(e) = lbl(f)(lbl(a_1), ..., lbl(a_n) )) = (
-//     "MarkFV" compose "MarkArgs" compose "UpdateCall"
-//   )(evalexit(p)) \
-//     & quad "where:" \
 
-//     & quad "UpdateCall"(s) = s[lbl(f) -> s(lbl(e))]\
-//     & quad "MarkArgs"(s) = s[lbl(a_i) -> "mark"(s, lbl(a_i), ef) | (i -> ef) in "FuncEffects"(f')]\
+We define  Instantiate : $("Signature", efl("Signature")) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variable in $PiEf$ and $phiEf$ into environment $Gamma$, and then unify each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
 
-//     & quad "MarkFV"(s) = s[x -> "mark"(s, x, ef) | (x -> ef) in "FuncEffects"(f')] \
-
-//     & quad "mark"(s, alpha, ef) =  cases(
-//       "EvalEff"("Instantiate"(epsilon, k), s(alpha)) & "if" ef = epsilon (k),
-//       "EvalEff"(ef, s(alpha)) & "otherwise",
-//     ) \
-// $
 
 $
+  "Instantiate"((t_1, ..., t_n) -> t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n) ) =\
+  quad (t'_1, ..., t'_n) -> t'_ret andef PiEf' union PhiEf'\
+  wide "where:" \
+  wide t'_i = "replace"(Gamma', t_i) "for each" t_i\
+  wide PiEf' = "replace"(Gamma', PiEf)\
+  wide PhiEf' = "replace"(Gamma', phiEf)\
+  wide Gamma' = "combine"(union.big_(t_i "is Function") unify (Gamma, t_i, alpha_i)) \
+  wide Gamma = { epsilon_k |-> emptyset | epsilon_k in PiEf} union {phiEf |-> emptyset}
+$ <eq:InstantiateDef>
+
+The combine function simply checks if there are more than two possible replacements, it should report an error.
 
 $
+  "combine"(Gamma) = cases(
+    "Error" & "if" exists epsilon "s.t." abs(Gamma(epsilon)) > 1\
+    Gamma & "otherwise"
+  )\
+$ <eq:CombineDef>
 
-Instance($t_f$, $(a_1, .., a_n)$) $:: ("Sign", ("Expr"...)) -> "Sign"$
-+ Take all effect variables in $Ef$ and $Theta$ as env $Gamma = {epsilon -> emptyset}$
-+ For each $a_i = {g}$ with function type $t_g$, UnifyType($Gamma, t_i,  t_g$), resulting in $Gamma_i$
-+ Return: $t_f$ with effect variables replaced using $"combine"(union.big Gamma_i)$
+We define the replace function as shown in @eq:ReplaceDef. As the name suggests, it simply replaces any occurence of effect variables $epsilon$ and $phiEf$ based on the combined environment.
 
-$"combine"(Gamma) = { epsilon -> ef_1 timesef .. timesef ef_n | epsilon in Gamma, {ef_1, .., ef_n} = Gamma(epsilon)}$
-
-UnifyType($Gamma, t andef Ef_t, tau andef Ef_tau$):
-+ for all i in [1..n], Unify($Gamma, Ef_t (i), Ef_tau (i)$)
-+ return unions of $Gamma$
 $
-  "Unify"(Gamma, ef, ef) = Gamma\
-  "Unify"(Gamma, epsilon, ef) = Gamma[epsilon |-> Gamma(epsilon) union ef]\
-  "Unify"(Gamma, "_", "_") = "Error"
+  "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}}\
+  "replace"(Gamma, PhiEf) = {v |-> ef | v |-> epsilon in PhiEf, Gamma(epsilon) = {ef}}\
+  "replace"(Gamma, phiEf) = Gamma(phiEf)\
+  "replace"(Gamma, t_"fun" andef PiEf union phiEf) = "replace"(Gamma, t_"fun") andef "replace"(Gamma, PiEf) union "replace"(Gamma, phiEf)\
+  "replace"(Gamma, (t_1, ..., t_n) -> t_ret) = ("replace"(Gamma, t_1), ..., "replace"(Gamma, t_n)) -> "replace"(Gamma, t_ret)
+$ <eq:ReplaceDef>
+
+
+// Instance($t_f$, $(a_1, .., a_n)$) $:: ("Sign", ("Expr"...)) -> "Sign"$
+// + Take all effect variables in $Ef$ and $Theta$ as env $Gamma = {epsilon -> emptyset}$
+// + For each $a_i = {g}$ with function type $t_g$, UnifyType($Gamma, t_i,  t_g$), resulting in $Gamma_i$
+// + Return: $t_f$ with effect variables replaced using $"combine"(union.big Gamma_i)$
+
+// $"combine"(Gamma) = { epsilon -> ef_1 timesef .. timesef ef_n | epsilon in Gamma, {ef_1, .., ef_n} = Gamma(epsilon)}$
+
+We define the unification function $unify$ in @eq:UnifyDef. The unification function adds a possible replacement of effect variables $epsilon$ and $phiEf$ to environment $Gamma$ recursively for each parameter in a function type. If the unification does not match, e.g. $unify (EfN, EfU)$, the function returns an error.
+
 $
+  unify (Gamma, ef, ef) = Gamma\
 
-- Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
-- $theta$ instantiation and unification
+  unify (Gamma, epsilon, ef) = Gamma[epsilon |-> Gamma(epsilon) union {ef}]\
 
-- This only instantiate up to second order. Design reason:
-  + Kotlin does not support currying / partial function application
-  + A function returning a function is rare in Kotlin codebase
+  unify (Gamma, phiEf, PhiEf') = Gamma[phiEf |-> Gamma(phiEf) union {PhiEf'}]\
+
+  unify (Gamma, PiEf, PiEf') = "combine"(union.big_(i in PiEf) unify(Gamma, PiEf(i), PiEf'(i))) \
+
+  unify (Gamma, PhiEf, PhiEf') = "combine"(union.big_(v in PhiEf) unify(Gamma, PhiEf(v), PhiEf'(v))) \
+
+  unify (Gamma, t andef PiEf union phiEf, t' andef PiEf' union PhiEf')  = "combine"(unify (t, t') union unify (PiEf,PiEf') union unify (phiEf, PhiEf'))\
+
+  unify (Gamma, (t_1, ..., t_n) -> t_ret, (t'_1, ..., t'_n) -> t'_ret) = "combine"( unify(Gamma, t_ret, t'_ret) union union.big_(i) unify (Gamma, t_i, t'_i)) \
+
+  unify ("_", "_") = "Error"
+$ <eq:UnifyDef>
+
+// TODO:
+// - This only instantiate up to second order. Design reason:
+//   + Kotlin does not support currying / partial function application
+//   + A function returning a function is rare in Kotlin codebase
 
 ] /* End of Utilization Analysis with Signature */
 
 
-Analysis result, utilization warning = ${f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not "UT" }$
+=== Analysis result and effect inference
 
-TODO: example
+TODO: code analysis example
 
-== Inferencing lambda signature
-TODO: text
+After a single pass of constraints evaluations, the analysis may report any unutilized construction calls in the function as follows.
 
-- Given lambda $lambda$, the signature $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf$ is inferred with:
-- $PiEf = {i -> "U" | p_i in "Params"(lambda) and evalexit(mono("exit"))(p_i) leqsq {UT} }$
-- $phiEf = {v -> "U" | v in "FV"(lambda) and evalexit(mono("exit"))(v) leqsq {UT} }$
+$ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
-- limitation: parametric effect inference is not yet possible
+The analysis can also produce warning for top-level function signature effects that do not match the actual result of utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
+
+$
+"ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(evalexit(mono("exit"))(p_i)) }\
+"GetEff"(u) = cases(
+    EfU &"if" u = {UT},
+    EfI &"if" u = {NU},
+    EfN &"otherwise"
+  )
+$ <eq:ParamWarningNonParametric>
+
+
+If the function is a lambda function, we can also infer the effect sets $PiEf union PhiEf$ in its signature as follows.
+
+$
+  PiEf = {i -> "GetEff"(evalexit(mono("exit"))(p_i)) | p_i in "Params" }\
+  PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
+$
+
+This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization values (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices. We need a more complex analysis to allow parametric effect check and inference.
