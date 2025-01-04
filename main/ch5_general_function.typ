@@ -3,12 +3,9 @@
 
 = Generalized Utilization Analysis
 
-While the simplified model of the problem is useful as a starting point, in practice we require a more sophisticated model. In this chapter we generalize the forward analysis of the simplified model to include all functions other than `create` and `utilize`.
-
-We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
+While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
 The `passThrough` function behavior is quite unintuitive at the first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
-
 
 #listing("Top level functions utilization examples")[```kt
 fun utilizeTwo(a: Utilizable, b: Utilizable) { // Utilize a and b
@@ -55,10 +52,10 @@ To complete our definition, we also allow functions to invalidate previously-uti
 
 == Utilization effects
 
-As we previously discussed, functions may affect the utilization of its arguments and free variables. We define the set of utilization effects $Ef$ in @eq:UtilEffects, where $EfU$ means it utilizes the value, $EfI$ means it invalidates the value's utilization, and $EfN$ means it does not affect the value.
+As we previously discussed, functions may affect the utilization of its arguments and free variables. We define the set of utilization effects $Ef$ in @eq:UtilEffects, where $EfU$ means it utilizes the value, $EfI$ means it invalidates the value's utilization, $EfN$ means it does not affect the value, and $EfX$ means unknown effect.
 
 $
-  Ef = {EfU, EfI, EfN}
+  Ef = {EfU, EfI, EfN, EfX}
 $ <eq:UtilEffects>
 
 We then extend the function type signature after its return type with effect notations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
@@ -66,31 +63,31 @@ We then extend the function type signature after its return type with effect not
 $
   f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\
   "where"
-  PiEf = efl(ef_1, ..., ef_n) = {1 |-> ef_1, .., n |-> ef_n},\
+  PiEf = {1 |-> ef_1, .., n |-> ef_n},\
   wide quad PhiEf = {v |-> ef_v | v in "FV"(f)}
 $ <eq:FuncSignWithEffects>
 
 The functions previously shown in @lst:TopLevelUtilEx and the lambda function `lam` in @lst:LambdaUtilEx can be annotated as follows.
 
 $
-  "utilizeTwo" : ("Utilizable", "Utilizable") -> "Unit" andef efl(EfU, EfU)\
+  "utilizeTwo" : ("Utilizable", "Utilizable") -> "Unit" andef { 1 |-> EfU, 1 |-> EfU}\
   "newUtilizable" : () -> "Utilizable"\
-  "passThrough": ("Utilizable") -> "Utilizable" andef efl(EfU)\
-  "lam" : ("Utilizable") -> "Unit" andef efl(EfU) union {b |-> EfU}
+  "passThrough": ("Utilizable") -> "Utilizable" andef { 1 |-> EfU }\
+  "lam" : ("Utilizable") -> "Unit" andef {1 |-> EfU, b |-> EfU}
 $
 
 Notice how `newUtilizable` does not have an effect since it only creates a new value, while `utilizeTwo` and `passThrough` only have effects on its parameters. In addition to the parameter effects, the lambda function `lam` also has the free variable effects.
 
 === Parametric utilization effect
 
-Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply`, which simply applies its first argument to the function argument at second position, can be annotated as follows.
+Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x)`, which simply applies the function `f` with the value `x`, can be annotated as follows.
 
 $
-  "apply" : (A, (A) -> B andef efl(epsilon) union phiEf ) -> B andef efl(epsilon) union phiEf\
-  "apply"(x, f) = f(x)
+  "apply" : ((A) -> B andef { 1 |-> epsilon } union phiEf, A ) -> B andef { 2 |-> epsilon } union phiEf\
+  "apply"(f,x) = f(x)
 $ <eq:ApplySignature>
 
-This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x` depends on the effect of `f` on its first parameter, which is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
+This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
 
 // TODO: - Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
 
@@ -271,51 +268,55 @@ $
 $ <eq:UtilAnalysisFuncCall>
 
 The analysis sets the utilization of the arguments and the free variables based on the function effects by using the ApplyEff function shown as follows.
-
+#[
+// Temporarily decrease block spacing here
+#show math.equation.where(block: true): set block(spacing: 1em)
 $
 "ApplyEff"(u, ef) = cases(
     {UT} "," &"if" ef = EfU,
     {NU} "," &"if" ef = EfI,
+    top "," &"if" ef = EfX,
     u "," &"if" ef = EfN,
   )\
 $
-
+]
 === Instantiating function signatures
 
 Before applying the effects, however, the analysis need to resolve the function signature using the ResolveSign function from the function alias analysis, and then instantiate the signature with the resolved arguments. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
 
-As an example, suppose that we have higher-order functions `apply` and `applyU` with signatures shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
+As an example, suppose that we have higher-order functions `apply(f,a)` and `applyU(f,a)` that pass the value $a$ to the function $f$. The signatures of these functions are shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
 #[
 // Temporarily decrease block spacing here
-#show math.equation.where(block: true): set block(spacing: 1.25em)
+#show math.equation.where(block: true): set block(spacing: 1em)
 
 $
-  &"apply"  &&: (A, (A) -> B andef efl(epsilon) union phiEf) -> B andef efl(epsilon) union phiEf\
-  &"applyU" &&: (A, (A) -> B andef efl(EfU) union phiEf) -> B andef efl(EfU) union phiEf\
+  &"apply"  &&: ((A) -> B andef { 1 |-> epsilon } union phiEf, A) -> B andef { 2 |-> epsilon } union phiEf\
+  &"applyU" &&: ((A) -> B andef { 1 |-> EfU } union phiEf, A) -> B andef { 2 |-> EfU } union phiEf\
 $ <eq:InstantiateExample1>
 
-Suppose that we also have the functions `f` and `g` that we are going to pass as an argument to `apply` and `applyU`. These functions have the following signatures:
+Suppose that we also have the functions `f` and `g` that we are going to pass as an argument to `apply` and `applyU`. The function `f` utilizes its first argument, and invalidates the free variable `x`, while function `g` only utilizes the free variable `y`. These functions have the following signatures:
 $
-  f : (A) -> B andef efl(EfU) union {x |-> EfI}\
-  g : (A) -> B andef efl(EfN) union {y |-> EfU}
+  f : (A) -> B andef {1 |-> EfU, x |-> EfI}\
+  g : (A) -> B andef {1 |-> EfN, y |-> EfU}
 $
 
-The calls `apply(a,f)`, `apply(a,g)`, `applyU(a,f)`, and `applyU(a,g)` are then instantiated as follows given $sigma_f$ and $sigma_g$ the signatures of `f` and `g`:
+The calls `apply(f,a)`, `apply(g,a)`, `applyU(f,a)`, and `applyU(g,a)` are then instantiated as follows, given $sigma_f$ and $sigma_g$ the signatures of `f` and `g`:
 
 $
-  &"Inst"("apply", (sigma_f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
-  &"Inst"("apply", (sigma_g)) &&= (A, A -> B andef efl(EfN) union {y |-> EfU}) -> B andef efl(EfU) union {y |-> EfU}\
-  &"Inst"("applyU", (sigma_f)) &&= (A, A -> B andef efl(EfU) union {x |-> EfI}) -> B andef efl(EfU) union {x |-> EfI}\
+  &"Inst"("apply", (sigma_f)) &&= (A -> B andef {1 |-> EfU, x |-> EfI}, A) -> B andef {2 |-> EfU, x |-> EfI}\
+  &"Inst"("apply", (sigma_g)) &&= (A -> B andef {1 |-> EfN, y |-> EfU}, A) -> B andef {2 |-> EfN, y |-> EfU}\
+  &"Inst"("applyU", (sigma_f)) &&= (A -> B andef {1 |-> EfU, x |-> EfI}, A) -> B andef {2 |-> EfU, x |-> EfI}\
   &"Inst"("applyU", (sigma_g)) &&= "Error"
 $
 ]
 
 #let unify = math.cal("U")
 
-As we can see in the example, the instantiations of `apply(a,f)` and `apply(a,g)` replace the parametric effects $epsilon$ and $phiEf$ with the effects of `f` and `g` accordingly. The instantiation of `applyU(a,f)` only replaces $phiEf$ since it is the only parametric effect in `applyU`. In contrast to the other calls, the instantiation of `applyU(a,g)` results in an error since the required effect signature #box($(A) -> B andef efl(EfU) union phiEf$) is not fulfilled by `g`, which has the effect $EfN$ for its first parameter.
+As we can see in the example, the instantiations of `apply(f,a)` and `apply(g,a)` replace the parametric effects $epsilon$ and $phiEf$ with the effects of `f` and `g` accordingly. The instantiation of `applyU(f,a)` only replaces $phiEf$ since it is the only parametric effect in `applyU`. In contrast to the other calls, the instantiation of `applyU(g,a)` results in an error since the required effect signature #box($(A) -> B andef {1 |-> EfU} union phiEf$) is not fulfilled by `g`, which has the effect $EfN$ for its first parameter.
 
-We define  Instantiate : $("Signature", efl("Signature")) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variable in $PiEf$ and $phiEf$ into environment $Gamma$, and then unify each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
-
+We define  Instantiate : $("Signature", angles("Signature", ...)) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variable in $PiEf$ and $phiEf$ into environment $Gamma$, and then unify each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
+#[
+#show math.equation.where(block: true): set block(spacing: 1em)
 
 $
   "Instantiate"((t_1, ..., t_n) -> t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n) ) =\
@@ -346,7 +347,7 @@ $
   "replace"(Gamma, t_"fun" andef PiEf union phiEf) = "replace"(Gamma, t_"fun") andef "replace"(Gamma, PiEf) union "replace"(Gamma, phiEf)\
   "replace"(Gamma, (t_1, ..., t_n) -> t_ret) = ("replace"(Gamma, t_1), ..., "replace"(Gamma, t_n)) -> "replace"(Gamma, t_ret)
 $ <eq:ReplaceDef>
-
+]
 
 // Instance($t_f$, $(a_1, .., a_n)$) $:: ("Sign", ("Expr"...)) -> "Sign"$
 // + Take all effect variables in $Ef$ and $Theta$ as env $Gamma = {epsilon -> emptyset}$
@@ -372,7 +373,7 @@ $
 
   unify (Gamma, (t_1, ..., t_n) -> t_ret, (t'_1, ..., t'_n) -> t'_ret) = "combine"( unify(Gamma, t_ret, t'_ret) union union.big_(i) unify (Gamma, t_i, t'_i)) \
 
-  unify ("_", "_") = "Error"
+  unify (Gamma, "_", "_") = "Error"
 $ <eq:UnifyDef>
 
 // TODO:
@@ -410,4 +411,4 @@ $
   PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 $
 
-This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization values (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices. We need a more complex analysis to allow parametric effect check and inference.
+This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization values (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.

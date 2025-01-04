@@ -10,39 +10,168 @@ TODO: text
 
 A function signature can also denotated with utilization preconditions in its parameter:
 
-$wide f :: (ann(omega_1) t_1, ..., ann(omega_n) t_n) -> t_ret andef efs(efl(ef_1, ..., ef_n), Theta)$
+$wide f :: (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union PhiEf$
 
-where $omega_i subset.eq {0, 1}$, 0 = Not Utilized, 1 = Utilized.
+where $utv_i in {NU, UT, top}$.
 
-This indicates that the call of function $f$ requires $"utilization"(a_i) in omega_i$ for each $a_i$ the value passed as $i$-th argument. If there is an argument that doesn't fulfil its precondition, it should be reported as an error. Any parameters without annotations are the same as annotated with $ann(0|1)$.
+This indicates that the call of function $f$ requires $"utilization"(a_i) leqsq utv_i$ for each $a_i$ the value passed as $i$-th argument. If there is an argument that doesn't fulfil its precondition, it should be reported as an error. Any parameters without annotations are the same as annotated with $ann(top)$.
+
+examples
+
+Collection functions
+$
+  "utilizeAll" :: (C[a]) -> "Unit" andef {1 |-> EfU}\
+  "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef {1 |-> efv} union phiEf) -> C[b] andef {1 |-> efv} union phiEf\
+  // "add" :: (C[a], a) -> "Unit" andef {1 |-> EfI, 2 |-> EfU}\
+  "add" :: (ann(omega)C[a], ann(omega) a) -> "Unit" andef {2 |-> EfU}\
+  "remove" :: (ann(UT) C[a], a) -> "Unit"\
+  "filter" :: (ann(UT) C[a], (a)-> "Bool" andef {1 |-> efv} union phiEf) -> C[a] andef {1 |-> efv} union phiEf\
+$
+
+File data type
+
+$
+  "File" :: "Utilizable"\
+  "open"(s) : ("String") -> "File"\
+  "read"(f) : (ann(NU)"File") -> "String"\
+  "write"(f, s) : (ann(NU)"File", "String") -> "Unit"\
+  "close"(s) : (ann(NU)"File") -> "Unit" andef {1 |-> EfU}\
+$
+
 
 === Analysis with preconditions
 
-// Design limitation: no parametric preconditions for now
 
-- no parametric preconditions
-- precondition check in function call rule
+#let unify = math.cal("U")
+#[
+// #show math.equation.where(block: true): set block(spacing: 1em)
+#let evalbracket = evalbracket.with(sub:"UA")
+#let evalentry = evalentry.with(sub:"UA")
+#let evalexit = evalexit.with(sub:"UA")
 
-== Collection utilization
-Collection functions
+
+update start constraint:
+
 $
-  "utilizeAll" :: (C[a]) -> () andef efl(U)\
-  "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef efs(efl(efv), theta)) -> C[b] andef efs(efl(efv, N), theta)\
-  "add" :: (C[a], a) -> () andef efl(I, U)\
-  "add" :: (ann(omega)C[a], ann(omega) a) -> () andef efl(N, U)\
-  "remove" :: (ann(1) C[a], a) -> ()\
-  "filter" :: (ann(1) C[a], (a)-> "Bool" andef efs(efl(efv), theta)) -> C[a] andef efs(efl(efv, N), theta)\
+  &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" } union { p_i |-> {utv_i} | p_i in "Params" } union { v |-> top | v in "FV" }\
+
 $
 
-== A better error reporting
+Update constraint for return statement:
+$
+  &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) sect "Cons" and "type"(lbl(e)) "is Utilizable"]\
+$
+
+Update constraint for function call:
+
+$
+  &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
+  &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
+  &wide u_ret t_ret &&= "ReturnType"(tau_f) \
+  &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\
+  &wide u_i &&= sp(a'_i) "for each argument value source" a'_i\
+  &wide ... &&"(rest of the definitions)"
+$
+
+update Instantiate function:
+
+$
+  "Instantiate"((u_1 t_1, .., u_n t_n) -> u_ret t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n), (v_1, ., v_n)) =\
+  quad (u'_1 t'_1, .., u'_n t'_n) -> u'_ret t'_ret andef PiEf' union PhiEf'\
+  wide "where:" \
+  wide u'_i = "replace"(Gamma', u_i) "for each" u_i\
+  wide Gamma' = "combine"(union.big_(t_i "is Function") unify (Gamma, t_i, alpha_i) union union.big_(t_i) unify(Gamma, u_i, v_i)) \
+  wide ... "(rest of the definitions)"\
+
+$
+
+update unification function $unify$:
+
+$
+
+  &unify(Gamma, omega, u) &&= Gamma[omega |-> Gamma(omega) union {u}]\
+
+  &unify(Gamma, omega, omega) &&= Gamma[omega |-> Gamma(omega) union {omega}]\
+
+
+  &unify(Gamma, u_p, u_a) &&= cases(
+    Gamma & "if" u_a leqsq u_p,
+    "Error" & "otherwise"
+  )\
+$
+]
+
+Analysis result
+$
+
+ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } \
+
+  "ReturnUtil" = union.big_(p in "Node") { c |-> sp(c) | c in "Sources"(p, e), p "is a" mono("return" lbl(e)) "node"}\
+
+ u_ret = union.big_(c in "ReturnUtil") "ReturnUtil"(c)\
+$
+
+
+$
+"ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, evalexit(mono("exit"))(p_i)) }\
+"GetEff"(omega, u) = cases(
+    EfN & "if" omega = u,
+    EfU &"if" u = {UT},
+    EfI &"if" u = {NU},
+    EfX &"otherwise"
+  )
+$
+
+== Parametric inference
 TODO: text
-drop?
+
+$
+  (A -> B andef {1 |-> epsilon} union phiEf, A) -> B andef {2 |-> epsilon} union phiEf \
+
+  "ApplyEff"(u, ef) = cases(
+    {UT} "," &"if" ef = EfU,
+    {NU} "," &"if" ef = EfI,
+    {t union {y_epsilon} | t in u} "," &"if" ef = epsilon,
+    u "," &"if" ef = EfN,
+  )\
+
+  "GetEff"(u) = cases(
+    "Eff"(t_1) timesef ... timesef "Eff"(t_n) "," & "if" u = {t_1, ..., t_n},
+    EfN "," & "if" u = top "or" u = emptyset,
+  )\
+
+  "Eff"(t) = cases(
+    EfU &"if" t = UT,
+    EfI &"if" t = NU,
+    epsilon_1 plusef ... plusef epsilon_n &"if" t = {y_epsilon_1, ..., y_epsilon_n},
+  )\
+
+  ef timesef EfI = EfI timesef ef = ef \
+  ef timesef EfN = EfN timesef ef = EfN \
+  ef timesef EfU = EfU timesef ef = ef \
+
+   \
+
+  E = "Set of effect variables" = {epsilon_1, ..., epsilon_n}\
+
+  Upsilon = "Set of utilization variables" = { y_epsilon | epsilon in E } \
+
+  T = (powerset(Upsilon) without { emptyset }) union {NU, UT} \
+
+  U = powerset(T) \
+
+  S = "MapLat"("Ref" -> U)
+$
+
+```
+call(f : ... & 1->ef, g: ...& 1->eg, x) = f(x); g(x) --- x = {ef, eg}
+```
 
 == Limitations
 TODO: text
 
 - Util signature of function-returning function
-- Parametric preconditions
+- Parametric inference is not yet supported
 
 == Usage analysis
 TODO: text

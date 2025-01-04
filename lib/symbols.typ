@@ -41,20 +41,24 @@
 #let EfU = math.accent("U", math.hat)
 #let EfI = math.accent("I", math.hat)
 #let EfN = math.accent("N", math.hat)
+#let EfX = math.accent("X", math.hat)
 #let PiEf = eff(sym.Pi)
 #let PhiEf = eff(sym.Phi)
 #let phiEf = eff(sym.phi)
 
-#let UT = 1 // math.accent("1", math.breve)
-#let NU = 0 // math.accent("0", math.breve)
+#let UT = math.accent("1", math.breve)
+#let NU = math.accent("0", math.breve)
+#let RT = $accent(R, breve)$
+
+#let utv = math.accent("u", math.breve)
+
 
 #let efv = math.epsilon
 #let andef = pad(left: 0.01em, right:0.01em, text(size: 0.85em, "&"))
 #let plusef = math.plus.circle
 #let timesef = math.times.circle
-#let efs(l, r) = $#l union #r$
-// #let efl(..body) = $bracket #body.pos().join(",") bracket.r$
-#let efl(..body) = angles(..body)
+
+#let plusUt = math.accent(math.plus.circle, math.breve)
 
 // Terms
 #let upar(f, i) = $"par"_(#f)^(#i)$
