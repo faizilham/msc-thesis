@@ -371,7 +371,7 @@ $
 
   unify (Gamma, t andef PiEf union phiEf, t' andef PiEf' union PhiEf')  = "combine"(unify (t, t') union unify (PiEf,PiEf') union unify (phiEf, PhiEf'))\
 
-  unify (Gamma, (t_1, ..., t_n) -> t_ret, (t'_1, ..., t'_n) -> t'_ret) = "combine"( unify(Gamma, t_ret, t'_ret) union union.big_(i) unify (Gamma, t_i, t'_i)) \
+  unify (Gamma, (t_1, ..., t_n) -> t_ret, (t'_1, ..., t'_n) -> t'_ret) = "combine"( unify(Gamma, t_ret, t'_ret) union union.big_(i) unify (Gamma, t'_i, t_i)) \
 
   unify (Gamma, "_", "_") = "Error"
 $ <eq:UnifyDef>

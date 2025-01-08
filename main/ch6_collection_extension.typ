@@ -2,42 +2,46 @@
 #import "../lib/utilities.typ": *
 
 = Handling Collection Types and Other Extensions
-TODO: text
 
-- maintaining invariant: Items in collection are either all utilized or not
+A common utilization tracking case is tracking the utilization of a collection of utilizable values, such as a list of deferred calls. Individually tracking the items inside the collection is very hard if not downright uncomputable. It is more practical to treat the utilization of the items as a whole collection. To allow this, we need to maintain an invariant: the utilization status of a collection of utilizable values is always the same to all its items' utilization statuses. This means that the collection type's primitive methods, such as map, filter and add, need to have utilization annotation in their signature to ensure that the invariant is held.
 
-== Utilization preconditions
+#[
+#show math.equation.where(block: true): set block(spacing: 1em)
 
-A function signature can also denotated with utilization preconditions in its parameter:
+== Utilization annotation in function signature
 
-$wide f :: (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union PhiEf$
+We extend the effectful function signature $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf$ with utilization annotations $utv_i$ in each of the parameter types and the return type as follows.
 
-where $utv_i in {NU, UT, top}$.
+$
+f : (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union PhiEf\
+"where" utv_i ::= NU | UT | top | omega
+$
 
-This indicates that the call of function $f$ requires $"utilization"(a_i) leqsq utv_i$ for each $a_i$ the value passed as $i$-th argument. If there is an argument that doesn't fulfil its precondition, it should be reported as an error. Any parameters without annotations are the same as annotated with $ann(top)$.
+The utilization annotation $utv$ is either a utilization lattice value from the set ${NU, UT, top}$ or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization value of at least $utv_i$, such that given $u_a$ the utilization value of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization value of the returned value. This way, we can also model functions that return an already-utilized value. As a matter of convenience, we treat a parameter or return type without annotation as annotated with $top$. For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
 
-examples
-
-Collection functions
 $
   "utilizeAll" :: (C[a]) -> "Unit" andef {1 |-> EfU}\
-  "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef {1 |-> efv} union phiEf) -> C[b] andef {1 |-> efv} union phiEf\
-  // "add" :: (C[a], a) -> "Unit" andef {1 |-> EfI, 2 |-> EfU}\
   "add" :: (ann(omega)C[a], ann(omega) a) -> "Unit" andef {2 |-> EfU}\
-  "remove" :: (ann(UT) C[a], a) -> "Unit"\
-  "filter" :: (ann(UT) C[a], (a)-> "Bool" andef {1 |-> efv} union phiEf) -> C[a] andef {1 |-> efv} union phiEf\
-$
+  "map" :: (ann(omega)C[a], (ann(omega)a) -> b andef {1 |-> efv} union phiEf) -> C[b] andef {1 |-> efv} union phiEf\
 
-File data type
+  "filter" :: (ann(UT) C[a], (a)-> "Bool" andef {1 |-> efv} union phiEf) -> C[a] andef {1 |-> efv} union phiEf
+$ <eq:CollectionTypeMethod>
 
+The function `utilizeAll(c)` does not have any utilization value requirement, and simply utilizes the collection `c` as a side effect. This function is practically the same to `awaitAll` in real cases of Deferred type. The `add(c,a)` function requires the collection `c` to have the same utilization value with the added item `a`, which has a parametric utilization value $omega$. The added item is then marked as utilized, since we transfer the utilization responsibility to the collection.
+
+The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization value requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
+
+Other than the collection type, we can also employ both utilization annotation and effect in function signature to model linear-type like resources, such as a file handler type. For example, the primitives of a File type can be annotated as follows.
 $
-  "File" :: "Utilizable"\
-  "open"(s) : ("String") -> "File"\
+  "open"(s) : ("String") -> ann(NU)"File"\
   "read"(f) : (ann(NU)"File") -> "String"\
   "write"(f, s) : (ann(NU)"File", "String") -> "Unit"\
   "close"(s) : (ann(NU)"File") -> "Unit" andef {1 |-> EfU}\
-$
+$ <eq:FileHandlerMethods>
 
+We can model the file handler status of open or closed by assigning not utilized ($NU$) as unclosed, and utilized ($UT$) as closed. The file handler type can only be constructed with  the `open` function, which always returns an unclosed handler. The `read` and `write` functions both require the file handler to be unclosed, and have no effect to the file handler's status. The `close` function also requires the file handler to be unclosed, but then utilize, i.e. closing, the handler as a side effect. This way the analysis can guarantee that an opened file handler is always closed exactly once, and there are no reads or writes to an already closed file handler.
+
+]
 
 === Analysis with preconditions
 
@@ -50,34 +54,63 @@ $
 #let evalexit = evalexit.with(sub:"UA")
 
 
+$
+  // &U &&= "OrderLat"(angles(bot, "UT", top)) \
+  &Omega &&= { omega_i | p_i in "Params" and utv_i = {omega_i} } \
+  &U &&= (powerset({NU, UT} union Omega), subset.eq) \
+  &V &&= "MapLat"("Src" -> U)\
+  &Y &&= "MapLat"(Omega -> powerset({NU, UT}))\
+  &S &&=  (V, Y)\
+$
+
+#let yp = $gamma_p^circle.small$
+#let ypo = $gamma_p^circle.small.filled$
+
+Given $(sp, yp) = evalentry(p)$
+
 update start constraint:
 
 $
-  &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" } union { p_i |-> {utv_i} | p_i in "Params" } union { v |-> top | v in "FV" }\
-
+  &evalentry(mono("start")) &&= (
+    space space.sixth { f |-> bot | f in "Cons" } union\
+    &&& wide { p_i |-> utv_i | p_i in "Params" } union\
+    &&& wide { v |-> top | v in "FV" },\
+    &&& quad { omega_i |-> bot | p_i in "Params"} space )\
 $
 
-Update constraint for return statement:
+Constraint for return statement is not updated, returning is still "using" the value
+
 $
-  &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) sect "Cons" and "type"(lbl(e)) "is Utilizable"]\
+  &evalexit(mono("p: return" lbl(e))) &&= (sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"], yp)\
 $
 
 Update constraint for function call:
 
 $
-  &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
+  &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
   &wide u_ret t_ret &&= "ReturnType"(tau_f) \
-  &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\
+  &wide ypo &&= yp[omega |-> yp(omega) join Gamma(omega) | omega in yp sect Gamma] \
+  &wide (tau_f andef PiEf union PhiEf), Gamma &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\
   &wide u_i &&= sp(a'_i) "for each argument value source" a'_i\
   &wide ... &&"(rest of the definitions)"
+$
+
+$
+  "ApplyEff"(ypo, u, ef) = cases(
+    {UT} &"if" ef = EfU,
+    {NU} &"if" ef = EfI,
+    top &"if" ef = EfX,
+    u[yp(omega) | omega in u and ypo(omega) != bot] &"if" ef = EfN,
+  )\
+
 $
 
 update Instantiate function:
 
 $
   "Instantiate"((u_1 t_1, .., u_n t_n) -> u_ret t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n), (v_1, ., v_n)) =\
-  quad (u'_1 t'_1, .., u'_n t'_n) -> u'_ret t'_ret andef PiEf' union PhiEf'\
+  quad ((u'_1 t'_1, .., u'_n t'_n) -> u'_ret t'_ret andef PiEf' union PhiEf'), Gamma'\
   wide "where:" \
   wide u'_i = "replace"(Gamma', u_i) "for each" u_i\
   wide Gamma' = "combine"(union.big_(t_i "is Function") unify (Gamma, t_i, alpha_i) union union.big_(t_i) unify(Gamma, u_i, v_i)) \
@@ -89,89 +122,105 @@ update unification function $unify$:
 
 $
 
-  &unify(Gamma, omega, u) &&= Gamma[omega |-> Gamma(omega) union {u}]\
+  unify(Gamma, omega, u) = Gamma[omega |-> Gamma(omega) union {u}]\
+  unify(Gamma, u, omega) = Gamma[omega |-> Gamma(omega) union {u}]\
 
-  &unify(Gamma, omega, omega) &&= Gamma[omega |-> Gamma(omega) union {omega}]\
-
-
-  &unify(Gamma, u_p, u_a) &&= cases(
-    Gamma & "if" u_a leqsq u_p,
+  unify(Gamma, u, u') = cases(
+    Gamma & "if" u' leqsq u,
     "Error" & "otherwise"
   )\
+
+    unify (Gamma, (u_1 t_1, ..., u_n t_n) -> u_ret t_ret, (u'_1 t'_1, ..., u'_n t'_n) -> u'_ret t'_ret) = \
+  wide "combine"(
+    unify(Gamma, t_ret, t'_ret) union
+    unify(Gamma, u_ret, u'_ret) union
+    union.big_(i) unify (Gamma, t'_i, t_i) union unify (Gamma, u'_i, u_i)
+    ) \
+
+
+  ... "(rest of the definitions)"
 $
 ]
 
 Analysis result
+
+Given $(s_"fin", gamma_"fin") = evalexit(mono("exit"))$
+
 $
 
- "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } \
+ "Warnings" = {f | f in "Cons" and s_"fin" (f) leqsq.not { UT } } \
 
   "ReturnUtil" = union.big_(p in "Node") { c |-> sp(c) | c in "Sources"(p, e), p "is a" mono("return" lbl(e)) "node"}\
 
  u_ret = union.big_(c in "ReturnUtil") "ReturnUtil"(c)\
 $
 
+ReturnUtil = utilization value just before return statement. warning if $u_ret leqsq.not utv_ret$
+
 
 $
-"ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, evalexit(mono("exit"))(p_i)) }\
-"GetEff"(omega, u) = cases(
-    EfN & "if" omega = u,
+"ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, s_"fin" (p_i)) }\
+"GetEff"(utv, u) = cases(
+    EfN & "if" u = utv and utv != {omega},
+    EfN & "if" u = {gamma_"fin" (omega)} and utv = {omega},
     EfU &"if" u = {UT},
     EfI &"if" u = {NU},
     EfX &"otherwise"
   )
 $
 
+Inference:
+$
+  utv_i = gamma_"fin" (omega_i) "for each" p_i in "Params"\
+  utv_ret = u_ret
+$
+/*
 == Parametric inference
 TODO: text
 
 $
   (A -> B andef {1 |-> epsilon} union phiEf, A) -> B andef {2 |-> epsilon} union phiEf \
 
+  E = "Set of effect variables" = {epsilon_1, ..., epsilon_n}\
+
+  Omega = { omega_i | p_i in "Params" } union{ omega_epsilon | epsilon in E } \
+
+  U = powerset({NU, UT} union Omega) \
+
+
+  "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}} union {i |-> omega_epsilon | i |-> epsilon in PiEf, Gamma(epsilon) = emptyset}\
+
+
   "ApplyEff"(u, ef) = cases(
     {UT} "," &"if" ef = EfU,
     {NU} "," &"if" ef = EfI,
-    {t union {y_epsilon} | t in u} "," &"if" ef = epsilon,
+    {omega_epsilon} "," &"if" ef = epsilon,
     u "," &"if" ef = EfN,
   )\
 
-  "GetEff"(u) = cases(
-    "Eff"(t_1) timesef ... timesef "Eff"(t_n) "," & "if" u = {t_1, ..., t_n},
-    EfN "," & "if" u = top "or" u = emptyset,
+  "GetEff"(utv, u) = cases(
+    EfN & "if" u = utv,
+    EfU &"if" u = {UT},
+    EfI &"if" u = {NU},
+    epsilon &"if" u = {omega_epsilon},
+    EfX &"otherwise"
   )\
 
-  "Eff"(t) = cases(
-    EfU &"if" t = UT,
-    EfI &"if" t = NU,
-    epsilon_1 plusef ... plusef epsilon_n &"if" t = {y_epsilon_1, ..., y_epsilon_n},
-  )\
+  PiEf = {i -> "GetEff"(evalexit(mono("exit"))(p_i)) | p_i in "Params" }\
+  PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 
-  ef timesef EfI = EfI timesef ef = ef \
-  ef timesef EfN = EfN timesef ef = EfN \
-  ef timesef EfU = EfU timesef ef = ef \
-
-   \
-
-  E = "Set of effect variables" = {epsilon_1, ..., epsilon_n}\
-
-  Upsilon = "Set of utilization variables" = { y_epsilon | epsilon in E } \
-
-  T = (powerset(Upsilon) without { emptyset }) union {NU, UT} \
-
-  U = powerset(T) \
-
-  S = "MapLat"("Ref" -> U)
 $
 
 ```
 call(f : ... & 1->ef, g: ...& 1->eg, x) = f(x); g(x) --- x = {ef, eg}
 ```
-
+*/
 == Limitations
 TODO: text
 
 - Util signature of function-returning function
-- Parametric inference is not yet supported
+- No inference for utilization annotation -> constraint $(omega leqsq u)$ collection "globally"
+- Algebraic utilization and effect is not yet supported
 
 == Usage analysis
 TODO: text
