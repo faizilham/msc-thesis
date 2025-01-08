@@ -392,7 +392,7 @@ After a single pass of constraints evaluations, the analysis may report any unut
 
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
-The analysis can also produce warning for top-level function signature effects that do not match the actual result of utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
+The analysis can also produce warning for top-level function signature effects that do not match the actual utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
 
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(evalexit(mono("exit"))(p_i)) }\
