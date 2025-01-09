@@ -6,4 +6,3 @@
 - Function Alias
 - Safely Reachable Sources
 - Utilization Analysis
-- Proof of monotonicity

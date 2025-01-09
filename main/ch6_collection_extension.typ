@@ -232,12 +232,6 @@ call(f : ... & 1->ef, g: ...& 1->eg, x) = f(x); g(x) --- x = {ef, eg}
 */
 
 /*
-== Limitations
-TODO: text
-
-- Util signature of function-returning function
-- No inference for utilization annotation -> constraint $(omega leqsq u)$ collection "globally"
-- Algebraic utilization and effect is not yet supported
 
 == Usage analysis
 TODO: text
