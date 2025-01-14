@@ -411,4 +411,4 @@ $
   PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 $
 
-This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization values (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
+This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.

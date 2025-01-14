@@ -3,8 +3,6 @@
 
 = Preliminaries
 
-TODO: modify
-
 In this chapter, we discuss the background knowledge needed for the research and review research literature related to the unused return value analysis problem.
 
 == The Kotlin programming language
@@ -93,9 +91,9 @@ TODO:
 - DFA
 - monotone fixpoint
 
-== Common notations and definitions
+== Effect system
 
-TODO: notation definitions
+== Common notations and definitions
 
 Given $s$ a mapping of $X -> Y$, $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$. Formally:
 

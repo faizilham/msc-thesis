@@ -9,7 +9,7 @@ In this chapter, we discuss our implementation of the utilization analysis in Ko
 
 == Annotating utilization and effect
 
-We use the annotation class feature for annotating utilization values and effects in function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization values are annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
+We use the annotation class feature for annotating utilization statuses and effects in function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization statuses are annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
 
 #listing("Annotation for File class")[
 ```kt

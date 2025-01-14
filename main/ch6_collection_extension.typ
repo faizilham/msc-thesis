@@ -17,7 +17,7 @@ f : (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union
 "where" utv_i ::= NU | UT | top | omega
 $
 
-The utilization annotation $utv$ is either a utilization lattice value from the set ${NU, UT, top}$ or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization value of at least $utv_i$, such that given $u_a$ the utilization value of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization value of the returned value. This way, we can also model functions that return an already-utilized value. As a matter of convenience, we treat a parameter or return type without annotation as annotated with $top$. For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
+The utilization annotation $utv$ is either a utilization status from the set ${NU, UT, top}$ or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization status of at least $utv_i$, such that given $u_a$ the utilization status of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization status of the returned value. This way, we can also model functions that return an already-utilized value. As a matter of convenience, we treat a parameter or return type without annotation as annotated with $top$. For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
 
 $
   "utilizeAll" :: (C[a]) -> "Unit" andef {1 |-> EfU}\
@@ -27,9 +27,9 @@ $
   "filter" :: (ann(UT) C[a], (a)-> "Bool" andef {1 |-> efv} union phiEf) -> C[a] andef {1 |-> efv} union phiEf
 $ <eq:CollectionTypeMethod>
 
-The function `utilizeAll(c)` does not have any utilization value requirement, and simply utilizes the collection `c` as a side effect. This function is practically the same to `awaitAll` in real cases of deferred call type. The `add(c,a)` function requires the collection `c` to have the same utilization value with the added item `a`, which has a parametric utilization value $omega$. The added item is then marked as utilized, since we transfer the utilization responsibility to the collection.
+The function `utilizeAll(c)` does not have any utilization status requirement, and simply utilizes the collection `c` as a side effect. This function is practically the same to `awaitAll` in real cases of deferred call type. The `add(c,a)` function requires the collection `c` to have the same utilization status with the added item `a`, which has a parametric utilization status $omega$. The added item is then marked as utilized, since we transfer the utilization responsibility to the collection.
 
-The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization value requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
+The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization status requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
 
 Other than the collection type, we can also employ both utilization annotation and effect in function signature to model linear-type like resources, such as a file handler type. For example, the primitives of a File type can be annotated as follows.
 $
@@ -67,7 +67,7 @@ $
 $
 ]
 
-Instead of just concrete utilization values {$NU$, $UT$}, we also include the set of utilization variables $Omega$ into the utilization lattice $U$. We include the utilization variables to allow easier inference that we will explain later. The program state lattice $Sigma$ comprises of two maps $S$, which is the map of value sources (calls, parameters, and free variables) to its utilization, and $Y$, which is the map of utilization variables to its known utilization values.
+Instead of just concrete utilization statuses {$NU$, $UT$}, we also include the set of utilization variables $Omega$ into the utilization lattice $U$. We include the utilization variables to allow easier inference that we will explain later. The program state lattice $Sigma$ comprises of two maps $S$, which is the map of value sources (calls, parameters, and free variables) to its utilization, and $Y$, which is the map of utilization variables to its known utilization statuses.
 
 #let yp = $gamma_p^circle.small$
 #let ypo = $gamma_p^circle.small.filled$
@@ -90,7 +90,7 @@ $ <eq:UtilAnnoConstrReturn>
 
 We choose to keep this behavior since we do not have a proper alias tracking. For example, the identity function is annotated as $(ann(omega) x) -> ann(omega) x andef {1 |-> UT}$, implying that the function utilizes the input and creates a new value with the same previous utilization, even if it is not actually the case.
 
-The most important change to the constraint functions is to the call nodes constraints. First, we update the Instantiate function to requires the utilization values of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization value assigned to $omega$.
+The most important change to the constraint functions is to the call nodes constraints. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
@@ -112,11 +112,10 @@ $
     {NU} &"if" ef = EfI,
     top &"if" ef = EfX,
     u[ypo(omega) | omega in u ] &"if" ef = EfN,
-  )\
-
+  )
 $
 
-As we mentioned earlier, the Instantiate function now also takes the utilization values of each arguments $(v_1, .., v_n)$ and also returns the combined unification environment $Gamma'$.
+As we mentioned earlier, the Instantiate function now also takes the utilization statuses of each arguments $(v_1, .., v_n)$ and also returns the combined unification environment $Gamma'$.
 
 $
   "Instantiate"((u_1 t_1, .., u_n t_n) -> u_ret t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n), (v_1, ., v_n)) =\
@@ -124,12 +123,11 @@ $
   wide "where:" \
   wide u'_i = "replace"(Gamma', u_i) "for each" u_i\
   wide Gamma' = "combine"(union.big_(t_i "is Function") unify (Gamma, t_i, alpha_i) union union.big_(t_i) unify(Gamma, u_i, v_i)) \
-  wide ... "(rest of the definitions)"\
-
+  wide ... "(rest of the definitions)"
 $
 ]
 
-We also update the unification function $unify$ so that it can handle unification between utilization values and variables. The unification between a required utilization value $u$ and a concrete utilization value $u'$ is defined by the relation $u' leqsq u$. Notice that the unification is in the contraposition order when unifying the parameters of a function type.
+We also update the unification function $unify$ so that it can handle unification between utilization statuses and variables. The unification between a required utilization status $u$ and a concrete utilization status $u'$ is defined by the relation $u' leqsq u$. Notice that the unification is in the contraposition order when unifying the parameters of a function type.
 
 $
   unify(Gamma, omega, u) = Gamma[omega |-> Gamma(omega) union {u}]\
@@ -153,7 +151,7 @@ $
 == Analysis result and basic signature inference
 
 
-The analysis reports errors and warnings based on the abstract program state at exit point, which is  $(s_"fin", gamma_"fin") = evalexit(mono("exit"))$. The resulting warnings are still the same as before, since construction calls are always marked with concrete utilization value.
+The analysis reports errors and warnings based on the abstract program state at exit point, which is  $(s_"fin", gamma_"fin") = evalexit(mono("exit"))$. The resulting warnings are still the same as before, since construction calls are always marked with concrete utilization status.
 
 $
  "Warnings" = {f | f in "Cons" and s_"fin" (f) leqsq.not { UT } }

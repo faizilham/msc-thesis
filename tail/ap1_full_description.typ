@@ -3,16 +3,14 @@
 
 = Utilization Analysis Formalization Summary
 
-TODO: formatting
-
 #set math.equation(numbering: none)
 #show math.equation.where(block: true): set block(spacing: 1em)
 
 #show heading.where(level: 2): set heading(numbering: "A.1")
 
-
 #let Fcal = math.cal("F")
-Given a function $Fcal$, we define:
+
+(TODO: formatting) Given a function $Fcal$, we define:
 
 $
 &"Node" &&= "The CFG nodes of" Fcal\
@@ -48,12 +46,13 @@ $
 Constraint functions $evalbracket("_") : "Node" -> S$.
 $
   &evalentry(mono("start")) &&= { e |-> bot | e in "Ref"} \
-  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q)\
   &evalexit(mono("p:" lbl(e) = "f")) &&= sp[e |-> f | f in "Func"]\
-  &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> sp(x) ]\
+  &evalexit(mono("p:" lbl(e) = x)) &&= sp[e |-> sp(x) ]
+$
+$
   &evalexit(mono("p:" lbl(e) = lambda.{...})) &&= sp[e |-> lambda ]\
   &evalexit(mono("p:" lbl(e) = lbl(f)(...))) &&= sp[e |-> top ]\
-
   &evalexit(mono("p:" x := lbl(e))) &&= sp[x |-> sp(e)]\
   &evalexit(p) &&= evalentry(p)\
 $
@@ -96,7 +95,8 @@ $
     sp[e |-> ({ (x, p) }, emptyset) ] &"if" x in "LocalVars",
     sp[e |-> ({x}, emptyset)] &"otherwise"
   )\
-
+$
+$
   &evalexit(mono("p: var" x := lbl(e))) &&=
     sp[x |-> (rpe(e), emptyset) ]\
 
@@ -192,26 +192,26 @@ $
     u[ypo(omega) | omega in u ] &"if" ef = EfN,
   )
 $
-Instantiate function
+Instantiate signature function
 $
   "Instantiate"((u_1 t_1, .., u_n t_n) -> u_ret t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n), (v_1, ., v_n)) =\
   quad ((u'_1 t'_1, .., u'_n t'_n) -> u'_ret t'_ret andef PiEf' union PhiEf'), Gamma'\
   wide "where:" \
+  wide u'_i = "replace"(Gamma', u_i) "for each" u_i\
   wide t'_i = "replace"(Gamma', t_i) "for each" t_i\
   wide PiEf' = "replace"(Gamma', PiEf)\
   wide PhiEf' = "replace"(Gamma', phiEf)\
-  wide u'_i = "replace"(Gamma', u_i) "for each" u_i\
   wide Gamma' = "combine"(union.big_(t_i "is Function") unify (Gamma, t_i, alpha_i) union union.big_(t_i) unify(Gamma, u_i, v_i)) \
   wide Gamma = { epsilon_k |-> emptyset | epsilon_k in PiEf} union {phiEf |-> emptyset} union {omega_k |-> emptyset | omega_k "in the inputs" }
 $
-Combine
+Combine unification environment function
 $
   "combine"(Gamma) = cases(
     "Error" & "if" exists x "s.t." abs(Gamma(x)) > 1\
     Gamma & "otherwise"
   )
 $
-Replace
+Replace signature variable function
 $
   "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}}\
   "replace"(Gamma, PhiEf) = {v |-> ef | v |-> epsilon in PhiEf, Gamma(epsilon) = {ef}}\
