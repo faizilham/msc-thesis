@@ -91,17 +91,6 @@ This example illustrates how the effect of `apply` is parametric to the effects 
 
 // TODO: - Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
 
-// $
-//   // ef + ef = ef; ef_1 + ef_2 = ef_2 + ef_1\
-//   // ef dot ef = ef; ef_1 dot ef_2 = ef_2 dot ef_1\
-//   U plusef N = U", and" ef plusef I = I "for all" ef :: E\
-//   U timesef N = N", and" ef timesef I = I "for all" ef :: E\
-// $
-
-// Both operators obey idempotence ($ef circle ef = ef$) and commutative ($ef_1 circle ef_2 = ef_2 circle ef_1$) properties.
-
-// Operator $plusef$ indicates serial application of effect (one after another), while $timesef$ indicates choice or possible branching.
-
 == Function alias analysis
 
 Since in the generalized model any function call may create a new utilizable value or has some effects, we first need to determine which function is called and what is its effect signature before we can analyze the values utilizations. We can determine the function by running a function alias analysis, which is a reachable definition analysis modified for function type values.
