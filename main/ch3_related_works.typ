@@ -2,21 +2,22 @@
 
 = Related Works
 
-TODO: more references
+In this chapter, we review literatures and other researches related to the usage and utilization analysis problem. We first look into static analyses in some programming languages that are similar to the utilization analysis.
 
-In this chapter, we discuss the background knowledge needed for the research and review research literature related to the unused return value analysis problem.
+== Static analyses similar to the utilization analysis
 
-== Unused value analyses in other programming languages
-
-Many languages include unused value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack many of the properties we proposed in this research. For example, in Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a function's discardable attribute is not preserved or propagated when the function is assigned to a function-type variable or passed to a higher-order function. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
+Many languages include unused value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack many of the properties we want in this research. For example, in Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a value is always deemed to be used if it passed as a parameter to any kind of functions, unlike the criteria for value utilization. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
 
 TODO: mention related
 - variable usage analysis
-- borrow-check rust -> jumping point to substructural type system
+
+// Another similar static analysis is the variable usage analysis, in which the analysis determines which variables is used or not.
+
+Requiring values to be used at least once, which is the heart of utilization analysis, is similar to requiring values or resources to be used at most or exactly once. One popular language that are built upon this principle is Rust (TODO: cite rust), in which non-copyable values can only be used at most once to guarantee memory safety without needing a garbage collector. These kinds of resource usage restrictions are often defined using a substructural type system.
 
 == Substructural type system
 
-Requiring values to be used at least once, which is the heart of unused return values analysis, is similar to requiring values or resources to be used at most or exactly once. These kinds of resource usage restrictions are often defined using a substructural type system. A substructural type system is a type system where at least one of the structural properties does not hold #cite(<walkerST>). The structural properties are the properties of the simply typed lambda calculus concerning the use of variables, which are:
+A substructural type system is a type system where at least one of the structural properties does not hold #cite(<walkerST>). The structural properties are the properties of the simply typed lambda calculus concerning the use of variables, which are:
   + Exchange: the variables ordering in the context do not matter in regards to their usage,
   + Weakening: any extra, irrelevant variable in the context does not prevent the type checking to fail,
   + Contraction: two identical variables in the context are equivalent to a single variable.

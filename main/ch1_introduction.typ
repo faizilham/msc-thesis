@@ -36,7 +36,9 @@ In this research, we extend the Kotlin compiler with a static analysis method fo
 + A formal definition of a static analysis method for tracking utilization of values.
 + A prototype implementation of the static analysis as a Kotlin compiler plugin.
 
-Since we focus on the Kotlin language, there are a few constraints that shall be fulfilled by the analysis method. First, the analysis is based on the data-flow analysis since it is the main technique used in the Kotlin compiler framework. Next, we shall use existing features of Kotlin, such as annotations, instead of developing new syntax. This is because we want the analysis to be compatible with common Kotlin programs as much as possible. Lastly, if some annotations are required on the function signatures, we want the analysis to be able to infer the annotations as much as possible, especially in the case of lambda functions. This is because a lot of Kotlin programs extensively use lambda functions, and it would be unwieldy if each of those lambda functions require annotations.
+Since we focus on the Kotlin language, there are a few constraints that shall be fulfilled by the analysis method. First, the analysis is based on the intra-procedural data-flow analysis since it is the main technique used in the Kotlin compiler framework. This also means that we would require some information embedded at the function signature level to allow analyzing function calls and interactions without requiring inter-procedural analysis techniques.
+
+As for the second constraint, we shall use existing features of Kotlin, such as annotations, instead of developing new syntax. This is because we want the analysis to be compatible with common Kotlin programs as much as possible. Lastly, if some annotations are required on the function signatures, we want the analysis to be able to infer the annotations as much as possible, especially in the case of lambda functions. This is because a lot of Kotlin programs extensively use lambda functions, and it would be unwieldy if each of those lambda functions require annotations.
 
 /*
 == Basic intuitions and desirable properties
@@ -68,8 +70,6 @@ One potential way to mark such discardable functions is by using Kotlin's annota
 === Propagation through higher-order functions
 
 Many Kotlin code bases extensively use lambda functions since it is the idiomatic style in Kotlin. This is especially true because of the scope functions provided in Kotlin's standard library, in which a lambda function is executed within the context or scope of an object. Some scope functions, such as `run` and `with`, also return the resulting value of the lambda function. It would be useful if the analysis could propagate the usage obligation of the resulting values to the scope functions or other higher-order functions.
-
-// TODO: scope function citation
 
 \Cref{lst:1_lambda} shows the example of the analysis with higher-order functions. This example is similar to the previous one shown in \Cref{lst:1_basic}, but each function is called indirectly using `run` scope function. The analysis gives the same warning as the previous one due to usage obligation propagation.
 
@@ -127,8 +127,6 @@ We shall call these types of values the utilizable types, and the associated set
 
 == Research challenges
 
-TODO: move this to ch3, with its solutions
-
 A few challenges arise due to the design and desired properties of the analysis. We currently have identified three main challenges that should be addressed in our research: propagation rules, alias tracking, and adoption into Kotlin.
 
 === Usage obligation propagation rules
@@ -183,7 +181,6 @@ Alias tracking is the second challenge that we need to address in our research, 
 
 A more complex aliasing problem example is illustrated in \Cref{lst:1_aliasing_complex}. In this example, the aliasing happens when Deferred objects are passed as arguments to other functions. In an ideal, exact analysis no warning should be produced, because the variables `one` and `two` are eventually awaited. However, this might be unrealistic or too complex to achieve without a more sophisticated system such as borrowing. Therefore, some levels of under or overapproximations are expected.
 
-// TODO: borrowing citation?
 /*
 \begin{listing}[H]
     \caption{A complex aliasing problem}

@@ -5,6 +5,21 @@
 
 In this chapter, we discuss the background knowledge needed for the research and review research literature related to the unused return value analysis problem.
 
+== Data flow analysis with monotonic framework
+
+TODO:
+
+#cite(<MollersSPA>)
+#cite(<NielsonPPA>)
+
+- lattice
+- DFA
+- monotone fixpoint
+
+== Types and effects system
+TODO: types and effect system from #cite(<NielsonPPA>)
+
+
 == The Kotlin programming language
 
 Kotlin is a statistically typed, general-purpose, object-oriented programming language developed by JetBrains #citep(<KotlinSpec2020>, 3). While mainly object-oriented, Kotlin also supports some aspects of the functional programming paradigm such as higher-order functions and lambda literals. We shall delve into some features of the Kotlin language that are connected to this research.
@@ -58,42 +73,29 @@ All AST constructs are transformed into the following CFG nodes.
 
 === Annotation
 
+Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declaration, function declaration, and function parameter #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which can be source-only, retained in compiled binary, or accessible during runtime. Annotation can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
 
-Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declaration, function declaration, and function parameter #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which can be source-only, retained in compiled binary, or accessible during runtime. Annotation can be declared in-program by users using annotation class syntax. \Cref{lst:2_annotation} shows an example of a user-defined annotation and its usage.
+#listing("Annotation usage in Kotlin")[
+```kt
+@Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION,
+    AnnotationTarget.TYPE_PARAMETER, AnnotationTarget.VALUE_PARAMETER,
+    AnnotationTarget.EXPRESSION, AnnotationTarget.TYPE)
+@Retention(AnnotationRetention.SOURCE)
+annotation class Ann(val message: String = "")
 
-/*
-\begin{listing}[h!]
-    \caption{Annotation usage in Kotlin}
-    \label{lst:2_annotation}
-    \begin{kotlin}
-        @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION,
-            AnnotationTarget.TYPE_PARAMETER, AnnotationTarget.VALUE_PARAMETER,
-            AnnotationTarget.EXPRESSION, AnnotationTarget.TYPE)
-        @Retention(AnnotationRetention.SOURCE)
-        annotation class Ann(val message: String = "")
-
-        @Ann class Foo {
-            @Ann fun bar(@Ann("test") baz: @Ann Int): @Ann Int {
-                return (@Ann("zero") 0)
-            }
-        }
-    \end{kotlin}
-\end{listing}
-*/
+@Ann class Foo {
+    @Ann fun bar(@Ann("test") baz: @Ann Int): @Ann Int {
+        return (@Ann("zero") 0)
+    }
+}
+```] <lst:KotlinAnnotation>
 
 Annotation can be used as a simple way to extend Kotlin without changing too much of the syntax. In this research, for example, we can use annotation to mark usage obligations.
 
-== Data flow analysis with monotonic framework
-
-TODO:
-
-- lattice
-- DFA
-- monotone fixpoint
-
-== Effect system
 
 == Common notations and definitions
+
+We shall define some common notations and definitions that we used in this document.
 
 Given $s$ a mapping of $X -> Y$, $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$. Formally:
 
@@ -119,3 +121,5 @@ A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A
 A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the ordering defined as $bot leqsq a leqsq top$, for all $a in A$.
 
 A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
+
+A constraint function, or transfer function, in a data-flow analysis is denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represent the program state equation at the entry point of node $p$ and the exit point of $p$. We also use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`.
