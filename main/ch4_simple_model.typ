@@ -101,7 +101,6 @@ fun test() {                    //s10 = {C1: ⊤, C2: UT, ...}
 
 ]
 
-
 == Forward analysis
 
 The backward analysis works quite well in the simplified problem and has the advantage of not requiring variable value tracking. However, we found that later in the generalized version of the problem, there are some aspects of the analysis that are easier to handle if we have information on past utilizations of values. The backward analysis, by its nature, only provide information about future utilizations. We found that while making future utilization guarantee is less straightforward in the forward analysis, it is still easier to reason with than making past utilization guarantee in the backward analysis.
@@ -142,6 +141,8 @@ The safely-reachable values set become less straightforward when the assignment 
 #let evalexit = evalexit.with(sub:"RV")
 #let ope = $o_p^circle.small$
 #let rpe = $r_p^circle.small$
+#let opx = $o_p^circle.small.filled$
+#let rpx = $r_p^circle.small.filled$
 
 To define the safely-reachable analysis, we first define three sets Ref, Cons, and VarAt as shown in @eq:ForwardSafeReachSets. The sets Ref and Cons have the same definitions as in the backward analysis. The VarAt set is a set of pairs of a local variable and a node. The pair ($x$, $p$) can be interpreted as "the values referred by local variable $x$ when the program execution reaches node $p$".
 
@@ -176,7 +177,7 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:RVTransferFunc>
 
-The construction call case is trivial; the call expression is simply mapped to the singleton set of the construction function. In the variable access expresssion case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to $(x, p)$. This is quite important since we want to distinguish when assignment from variable to variable happened. The variable declaration case is also trivial; we simply mapped $x$ to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
+In the construction call case, the call expression is simply mapped to the singleton set of the construction function. In the variable access expresssion case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to the current variable reference, denoted by the variable-node pair $(x, p)$. This is quite important since we want to distinguish when assignment from variable to variable happened. In the case of variable declaration, the variable $x$ is mapped to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
 
 When the analysis reaches a fixpoint, we can define the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
 
@@ -194,14 +195,13 @@ $
   &&&"where" sigma = "SafeReach"(p, e)
 $ <eq:ForwardSafeReachFunc>
 
-The SafeReach function returns the reachable value set if it only contains a single value. Otherwise, it returns non-occluded construction sites. The Sources function simply resolve a singleton set of $(x, p)$ pair into its safely-reachable set.
+The SafeReach function returns the reachable value set if it only contains a single value. Otherwise, it returns non-occluded construction sites. The Sources function merely resolve a singleton set of variable reference $(x, p')$ into its safely-reachable set.
 
-TODO: Prove: Given $sigma = "Sources"(p, e)$, if $abs(sigma) >=2$ then all $c in sigma$ is alive exclusively from each other
+The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that are alive exclusively from each other. Construction calls $f$ and $g$ are exclusively alive if there are no program path that calls both $f$ and $g$. In other words, the CFG nodes in which $f$ and $g$ are called, which are $mono(p_f: lbl(e_f) = f(...))$ and $mono(p_g: lbl(e_g) = g(...))$, are not ancestor of each other.
 
-- Lemma: if $abs(sigma) >= 2$, then all of the elements are call sites
-- Lemma: Occluded values must be alive before the current value
-- Occlusion only matters if SafeReach has more than one value
+We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that are not exclusively alive, i.e. one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus excludively alive to each other.
 
+// TODO:
 ] /* End of Safely Reachable Value */
 
 #[

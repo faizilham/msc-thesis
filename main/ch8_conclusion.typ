@@ -7,7 +7,7 @@ In summary, we present a data flow analysis for tracking the utilization of valu
 
 There are some limitations to our work that can be extended in the future. First, our analysis cannot infer parametric effects in lambda function signatures. While it is possible to extend the analysis to allow this, we chose not to do it since it is quite rare for a Kotlin lambda function to be a higher-order function. Allowing parametric effects would also disallow our heuristic for implementing the fast, enumeration-only utilization lattice.
 
-Another limitation is tracking utilizable values that escape the function through means other than a direct return statement, for example through a free variable or through a closure environment. Our analysis is still sound since it would simply mark such values as unutilized and produce warnings about it, but there might be a way to handle some of those cases more accurately.
+Another limitation is tracking utilizable values that escape the function through means other than a direct return statement, for example through a free variable or through a closure environment. Our analysis is still sound since it would mark such values as unutilized and produce warnings about it, but there might be a way to handle some of those cases more accurately.
 
 Our analysis also does not properly identify value aliases, and as a result some functions may be annotated unintuitively. For example, in our analysis the identity function is annotated with a non-neutral, utilizing effect for its parameter, since the analysis need to assume that a function that returns a utilizable value always creates a new value. With a proper alias analysis, the identity function can be annotated with neutral effect.
 

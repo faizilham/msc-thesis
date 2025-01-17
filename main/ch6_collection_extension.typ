@@ -27,7 +27,7 @@ $
   "filter" :: (ann(UT) C[a], (a)-> "Bool" andef {1 |-> efv} union phiEf) -> C[a] andef {1 |-> efv} union phiEf
 $ <eq:CollectionTypeMethod>
 
-The function `utilizeAll(c)` does not have any utilization status requirement, and simply utilizes the collection `c` as a side effect. This function is practically the same to `awaitAll` in real cases of deferred call type. The `add(c,a)` function requires the collection `c` to have the same utilization status with the added item `a`, which has a parametric utilization status $omega$. The added item is then marked as utilized, since we transfer the utilization responsibility to the collection.
+The function `utilizeAll(c)` does not have any utilization status requirement, and utilizes the collection `c` as a side effect. This function is practically the same to `awaitAll` in real cases of deferred call type. The `add(c,a)` function requires the collection `c` to have the same utilization status with the added item `a`, which has a parametric utilization status $omega$. The added item is then marked as utilized, since we transfer the utilization responsibility to the collection.
 
 The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization status requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
 
@@ -82,7 +82,7 @@ $
     &&& quad space space.sixth { omega_i |-> bot | p_i in "Params" and utv_i = omega_i} )\
 $ <eq:UtilAnnoConstrStart>
 
-@eq:UtilAnnoConstrReturn shows the constraint function for return statement nodes, given $(sp, yp) = evalentry(p)$. This constraint is only trivially updated to include the lattice changes, meaning that returning a value is still counted as utilizing the value.
+@eq:UtilAnnoConstrReturn shows the constraint function for return statement nodes, given $(sp, yp) = evalentry(p)$. This constraint is only updated to include the lattice changes, meaning that returning a value is still counted as utilizing the value.
 
 $
   &evalexit(mono("p: return" lbl(e))) &&= (sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"], yp)\

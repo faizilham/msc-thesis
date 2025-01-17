@@ -65,7 +65,7 @@ fun<A, B> (@Util("ua") A).let1(
 
 == Lattice and function signature data structure
 
-While in Chapter 6 we extend the utilization lattice to include utilization variables $omega$, in practice the utilization variables are currently only useful for inferencing the parameters' initial utilization. In the inference case, each parameter is always assigned with a unique utilization variable. Rather than using a set object to represent the lattice, we model the utilization lattice as a enumeration of `Bot` ($bot$), `UT` ($UT$), `NU` ($NU$) and `Top` ($top$), as shown in @lst:UtilLatClass. Parameters are assigned with bottom value at start, and the implementation simply track the latest known utilization variable value for each function parameters. This is because it is much more efficient to represent the lattice value as a simple enumeration than a set object.
+While in Chapter 6 we extend the utilization lattice to include utilization variables $omega$, in practice the utilization variables are currently only useful for inferencing the parameters' initial utilization. In the inference case, each parameter is always assigned with a unique utilization variable. Rather than using a set object to represent the lattice, we model the utilization lattice as a enumeration of `Bot` ($bot$), `UT` ($UT$), `NU` ($NU$) and `Top` ($top$), as shown in @lst:UtilLatClass. Parameters are assigned with bottom value at start, and the implementation simply track the latest known utilization variable value for each function parameters. This is because it is much more efficient to represent the lattice value as a plain enumeration than a set object.
 
 
 #listing([Utilization lattice class and the $leqsq$ implementation])[

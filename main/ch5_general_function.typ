@@ -80,7 +80,7 @@ Notice how `newUtilizable` does not have an effect since it only creates a new v
 
 === Parametric utilization effect
 
-Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x)`, which simply applies the function `f` with the value `x`, can be annotated as follows.
+Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x)`, which applies the function `f` with the value `x`, can be annotated as follows.
 
 $
   "apply" : ((A) -> B andef { 1 |-> epsilon } union phiEf, A ) -> B andef { 2 |-> epsilon } union phiEf\
@@ -230,7 +230,7 @@ $
   &S &&= "MapLat"("Src" -> U) \
 $ <eq:UtilAnalysisLattices>
 
-We then modify the constraint functions $evalbracket("_") : "Node" -> S$. The pre-execution constraints are trivial, as shown in @eq:UtilAnalysisConstraintGen1. Construction call sites are initialized to $bot$, while parameters and free variables are initialized to $top$ since we do not know its initial utilization.
+We then modify the constraint functions $evalbracket("_") : "Node" -> S$. The pre-execution constraints are quite simple, as shown in @eq:UtilAnalysisConstraintGen1. Construction call sites are initialized to $bot$, while parameters and free variables are initialized to $top$ since we do not know its initial utilization.
 
 $
   &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" } union { x |-> top | x in "NonLocal" }\
@@ -327,7 +327,7 @@ $
   )\
 $ <eq:CombineDef>
 
-We define the replace function as shown in @eq:ReplaceDef. As the name suggests, it simply replaces any occurence of effect variables $epsilon$ and $phiEf$ based on the combined environment.
+We define the replace function as shown in @eq:ReplaceDef. As the name suggests, it replaces any occurence of effect variables $epsilon$ and $phiEf$ based on the combined environment.
 
 $
   "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}}\

@@ -33,5 +33,6 @@
 
 #show: back-matter
 
-#include "tail/ap1_full_description.typ"
+#include "tail/ap1_safely_reachable_proof.typ"
+#include "tail/ap2_full_description.typ"
 #include "tail/references.typ"
