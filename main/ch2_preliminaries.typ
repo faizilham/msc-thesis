@@ -23,7 +23,6 @@ In a data-flow analysis, lattices are used to represent abstract states of a pro
 #figure(caption: "Floating point number lattice")[
 #diagram(
     node-defocus: 0,
-    node-inset: 5pt,
 		node((0,0), [$top$]),
 		node((-1,1), [$R$]),
 		node((0,1), [$infinity$]),
@@ -42,7 +41,47 @@ In a data-flow analysis, lattices are used to represent abstract states of a pro
 
 === Transfer functions and monotonicity
 
-=== Reachable definitions analysis
+The transfer or constraint functions in a data-flow analysis are equations (or inequalities) of the program state lattice, defined for each nodes in the programs' CFG. These equations are defined for the entry point and exit point of the nodes #citep(<NielsonPPA>, 63), which describe the state right before and after the execution of the nodes. We use the notation $evalentry(p)$ and $evalexit(p)$ to denote the equation for the nodes' entry and exit points respectively.
+
+The way the equations are defined reflects the direction of the analysis, which either forward or backward. A forward analysis is an analysis that computes information about past behavior, while a backward one computes future behavior #citep(<MollersSPA>, 72). In forward analysis, the entry equations $evalentry(p)$ are usually defined as a combination of the predecessors' exit equation $evalexit(q)$ for each $q$ a predecessor of $p$, while the exit equations $evalexit(p)$ are defined by the nodes' entry equation $evalentry(p)$. The reverse is true for backward analysis, with the exit equations defined by the successors' entry equation.
+
+When the information flow from the predecessor nodes (or successor nodes in case of backward analysis), the lattice can be combined using either the least upper bound operation $join.big$ or greatest lower bound operation $meet.big$. These way of combining the lattice respectively reflects whether the analysis is a may or a must analysis #citep(<MollersSPA>, 73). A may analysis computes information that may be true, in other words an over-approximation of the real state. A must analysis, meanwhile, computes information that must be true, that is the under-approximation.
+
+In order for the equations to converge, the transfer functions should be monotonic. A monotonic function $f : S_1 -> S_2$, given lattices $S_1$ and $S_2$, is a function that preserves the order of the input, that is for all $x, y: S_1$ if $x leqsq y$, it is also the case that $f(x) leqsq f(y)$  #citep(<MollersSPA>, 44).
+
+=== Reaching definitions analysis
+
+A classical example of a data-flow analysis is the reaching definitions analysis. We use a similar analysis to the reaching definition analysis, and thus we shall discuss the original version.
+
+The reaching definitions analysis computes which variable assignments might define the values of variables at any points in the program #citep(<MollersSPA>, 71). The lattice used in this analysis is the map of variables to the powerset of assignment statements. For example, given the following program:
+#listing("Program example for reaching definition analysis")[
+  ```
+var a, b, c;
+a = 1;
+b = a + 1;
+if (a < 2) {
+  a = 2;
+} else {
+  a = a + 1;
+  b = a - 3;
+}
+c = a - b;
+```
+]
+
+the program state lattice is the map from variable set ${a, b, c}$ to the powerset of assignment set ${#[`a=1`, `b=a+1`, `a=2`, `a=a+1`, `b=a-3`, `c=a-b`]}$. After the end of the if-else at line 9, we would expect that the program state lattice to be ${a |-> {mono("a=2"), mono("a=a+1")}, b |-> {mono("b=a+1")}, c |-> emptyset}$. The transfer functions equations are then defined by @eq:ReachingDefAnalysis.
+
+$
+  &evalentry(mono("start")) &&= {* |-> emptyset}\
+  &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q)\
+  &evalexit(mono(p": x=expr")) &&= evalentry("p") [ x |-> {mono("x=expr")} ]\
+  &evalexit(p) &&= evalentry("p")\
+$ <eq:ReachingDefAnalysis>
+
+
+The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At program start, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we change the mapping of the assigned variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
+
+
 
 == Types and effects system
 TODO: types and effect system from @NielsonPPA
