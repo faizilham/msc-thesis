@@ -74,12 +74,12 @@ the program state lattice is the map from variable set ${a, b, c}$ to the powers
 $
   &evalentry(mono("start")) &&= {* |-> emptyset}\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q)\
-  &evalexit(mono(p": x=expr")) &&= evalentry("p") [ x |-> {mono("x=expr")} ]\
+  &evalexit(mono(p": x=expr")) &&= (evalentry("p") without { x |-> * }) union { x |-> {mono("x=expr")} }\
   &evalexit(p) &&= evalentry("p")\
 $ <eq:ReachingDefAnalysis>
 
 
-The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At program start, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we change the mapping of the assigned variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
+The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At program start, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we replace the mapping of the variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
 
 
 
@@ -167,9 +167,9 @@ Annotation can be used as a simple way to extend Kotlin without changing too muc
 
 == Common notations and definitions
 
-We shall define some common notations and definitions that we used in this document.
+We shall define some common notations and definitions that we used in this research.
 
-Given $s$ a mapping of $X -> Y$, $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$. Formally:
+A mapping $s: X -> Y$ is a set of mapping pairs $(x |-> y)$, in which for all $x in X$, there is a $y in Y$ such that $s(x) = y$. The notation $s[x |-> y]$ denotes the replacement of $x$ mapping in $s$ to $y$, such that $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$.
 
 $
   &s[x |-> y] &&= (s without {x |-> *}) union {x |-> y} \
@@ -180,13 +180,7 @@ $
   )
 $
 
-A map lattice $"MapLat"(A -> L)$ is a lattice of the mapping from set A to lattice L, and its ordering is equivalent to the ordering of lattice L.
-
-$
-  M = "MapLat"(A -> L) = (A -> L, attach(leqsq, br: L))\
-  "where, for all" m_1, m_2 in powerset(M), "this property holds":\
-  m_1 leqsq m_2 equiv forall a in A . m_1(a) attach(leqsq, br: L) m_2(a)
-$
+A map lattice $"MapLat"(X -> Y)$ is a lattice $(X -> Y, attach(leqsq, br: Y))$, which is the mapping from set $X$ to lattice $(Y, attach(leqsq, br: Y))$, and its ordering ($leqsq$) is equivalent to the ordering of lattice $Y$ ($attach(leqsq, br: Y)$). This means that given the map lattices $m_1, m_2 : X -> Y$, the property $m_1 leqsq m_2$ holds if and only if $y_1 attach(leqsq, br: Y) y_2$ for all $a in X$, $(a |-> y_1) in m_1$ and $(a |-> y_2) in m_2$.
 
 A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $A$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ can be illustrated as @fig:PowsetLattice.
 
@@ -246,4 +240,4 @@ A flat lattice $"FlatLat"(A)$ is a lattice $(A union {bot, top}, leqsq)$, with t
 
 A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
-The transfer functions, or constraint functions, equations in a data-flow analysis are denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represents the program state equation at the entry point of a node $p$ and the exit point of $p$. We use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`. For example, the notation $evalexit(mono(p : "return" lbl(e))) = ...$ denotes the equation for a return statement node $p$.
+The transfer functions, or constraint functions, equations in a data-flow analysis are denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represents the program state equation at the entry point of a node $p$ and the exit point of $p$. We use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`. For example, the notation $evalexit(mono(p : "return" lbl(e)))$ denotes the equation for a return statement node $p$.
