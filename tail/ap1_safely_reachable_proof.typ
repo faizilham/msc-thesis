@@ -15,7 +15,7 @@
 #let opx = $o_p^circle.small.filled$
 #let rpx = $r_p^circle.small.filled$
 
-Given the constraint functions,
+Given the transfer functions,
 
 $
   &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "Cons" } union {f |-> ({f}, emptyset) | f in "Cons"} \

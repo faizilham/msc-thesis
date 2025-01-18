@@ -59,6 +59,11 @@ Given an expression label $e$, the value of the expression is denoted as $lbl(e)
 
 TODO: nodes explanation and transformation examples
 
+important explanations:
+- variable declaration can only be once per path & variable, i.e. no ancestor declaration / assignment
+- assignment always have at least 1 declaration ancestor
+- etc
+
 All AST constructs are transformed into the following CFG nodes.
 + Function start #cfg[start] and exit #cfg[exit]
 + Literal constant. #cfg("$e = <Lit>")
@@ -122,4 +127,4 @@ A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the
 
 A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
-A constraint function, or transfer function, in a data-flow analysis is denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represent the program state equation at the entry point of node $p$ and the exit point of $p$. We also use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`.
+A transfer function, or a constraint function, equation in a data-flow analysis is denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represent the program state equation at the entry point of node $p$ and the exit point of $p$. We also use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`.

@@ -72,7 +72,7 @@ Instead of just concrete utilization statuses {$NU$, $UT$}, we also include the 
 #let yp = $gamma_p^circle.small$
 #let ypo = $gamma_p^circle.small.filled$
 
-We then redefine the constraint functions $evalbracket(p) : "Node" -> Sigma$. We first start with the constraint for `start` node, as shown in @eq:UtilAnnoConstrStart. The program state is initialized with each parameter $p_i$ mapped to its utilization annotation $utv_i$, and any utilization variable $omega_i$ that is used in the annotations is mapped to a bottom value.
+We then redefine the transfer functions $evalbracket(p) : "Node" -> Sigma$. We first start with the `start` node, as shown in @eq:UtilAnnoTransferStart. The program state is initialized with each parameter $p_i$ mapped to its utilization annotation $utv_i$, and any utilization variable $omega_i$ that is used in the annotations is mapped to a bottom value.
 #[
 #show math.equation.where(block: true): set block(spacing: 1.1em)
 $
@@ -80,17 +80,17 @@ $
     { f |-> bot | f in "Cons" } union { p_i |-> utv_i | p_i in "Params" } union
     { v |-> top | v in "FV" },\
     &&& quad space space.sixth { omega_i |-> bot | p_i in "Params" and utv_i = omega_i} )\
-$ <eq:UtilAnnoConstrStart>
+$ <eq:UtilAnnoTransferStart>
 
-@eq:UtilAnnoConstrReturn shows the constraint function for return statement nodes, given $(sp, yp) = evalentry(p)$. This constraint is only updated to include the lattice changes, meaning that returning a value is still counted as utilizing the value.
+@eq:UtilAnnoTransferReturn shows the transfer function for return statement node, given $(sp, yp) = evalentry(p)$. It is only updated to include the lattice changes, meaning that returning a value is still counted as utilizing the value.
 
 $
   &evalexit(mono("p: return" lbl(e))) &&= (sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"], yp)\
-$ <eq:UtilAnnoConstrReturn>
+$ <eq:UtilAnnoTransferReturn>
 
 We choose to keep this behavior since we do not have a proper alias tracking. For example, the identity function is annotated as $(ann(omega) x) -> ann(omega) x andef {1 |-> UT}$, implying that the function utilizes the input and creates a new value with the same previous utilization, even if it is not actually the case.
 
-The most important change to the constraint functions is to the call nodes constraints. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
+The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
@@ -177,7 +177,7 @@ $
   )
 $
 
-The analysis may also infers the utilization annotation of a lambda function. At start, it assign each utilizable parameter $p_i$ with a utilization variable $omega_i$. Then, after constraint evaluations, the utilization annotation of parameters $utv_i$ and utilization annotation of return value $utv_ret$ are inferred as follows.
+The analysis may also infers the utilization annotation of a lambda function. At start, it assign each utilizable parameter $p_i$ with a utilization variable $omega_i$. Then, after transfer function evaluations, the utilization annotation of parameters $utv_i$ and utilization annotation of return value $utv_ret$ are inferred as follows.
 
 $
   utv_i = gamma_"fin" (omega_i) "for each" p_i in "Params"\

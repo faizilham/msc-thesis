@@ -43,7 +43,7 @@ $
   &S &&= "MapLat"("Ref" -> F)
 $
 
-Constraint functions $evalbracket("_") : "Node" -> S$.
+Transfer functions $evalbracket("_") : "Node" -> S$.
 $
   &evalentry(mono("start")) &&= { e |-> bot | e in "Ref"} \
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q)\
@@ -79,7 +79,7 @@ $
   &S &&= "MapLat"("Ref" -> (R, O))\
 $
 
-Constraint functions $evalbracket("_") : "Node" -> S$
+Transfer functions $evalbracket("_") : "Node" -> S$
 
 $
   &evalentry(mono("start")) &&=
@@ -148,7 +148,7 @@ $
 #let yp = $gamma_p^circle.small$
 #let ypo = $gamma_p^circle.small.filled$
 
-Constraint Functions $evalbracket("_") : "Node" -> Sigma$
+Transfer Functions $evalbracket("_") : "Node" -> Sigma$
 $
   &evalentry(mono("start")) &&= (
     { f |-> bot | f in "Cons" } union { p_i |-> utv_i | p_i in "Params" } union

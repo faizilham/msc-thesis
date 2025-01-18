@@ -111,7 +111,7 @@ $
   &S &&= "MapLat"("Ref" -> F)\
 $
 
-We define the constraint functions $evalbracket("_") : "Node" -> S$ for the data flow analysis in @eq:FuncAliasConstraints, given the previous state notation $sp = evalentry(p)$.
+We define the transfer functions $evalbracket("_") : "Node" -> S$ for the data flow analysis in @eq:FuncAliasTransfers, given the previous state notation $sp = evalentry(p)$.
 $
   &evalentry(mono("start")) &&= { e |-> bot | e in "Ref"} \
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
@@ -122,9 +122,9 @@ $
 
   &evalexit(mono("p:" x := lbl(e))) &&= sp[x |-> sp(e)]\
   &evalexit(p) &&= evalentry(p)\
-$ <eq:FuncAliasConstraints>
+$ <eq:FuncAliasTransfers>
 
-The constraint functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
+The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
 
 We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise it returns the function type without utilization effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
@@ -166,7 +166,7 @@ $
   &S &&= "MapLat"("Ref" -> (R, O))\
 $ <eq:RVLatticeModified>
 
-We can then update the constraint functions $evalbracket("_") : "Node" -> S$, starting with the pre-execution constraints as defined in @eq:RVPreExecConstraintModified. The main difference here is we set the initial reachable values for non-local sources to the singleton set of itself.
+We can then update the transfer functions $evalbracket("_") : "Node" -> S$, starting with the pre-execution transfer functions as defined in @eq:RVPreExecTransferModified. The main difference here is we set the initial reachable values for non-local sources to the singleton set of itself.
 
 $
   &evalentry(mono("start")) &&=
@@ -174,9 +174,9 @@ $
     &&&&& union {f |-> ({f}, emptyset) | f in "Cons"} \
     &&&&& union {x |-> ({x}, emptyset) | x in "NonLocal"} \
   &evalentry(p) &&= &&join.big_(q in "pred"(p)) evalexit(q) \
-$ <eq:RVPreExecConstraintModified>
+$ <eq:RVPreExecTransferModified>
 
-We also redefine the post-execution constraints in @eq:RVPostExecConstraintModified, given entrance state $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. The constraints are similar to the one in the simplified model, with the main difference when handling parameter and non-local variables. Since we require parameters and free variables to be immutable references, we report an error when there is a reassignment to them.
+We also redefine the post-execution transfer functions in @eq:RVPostExecTransferModified, given entrance state $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. The equations are similar to the one in the simplified model, with the main difference when handling parameter and non-local variables. Since we require parameters and free variables to be immutable references, we report an error when there is a reassignment to them.
 
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (...))) &&= sp[e |-> ({f}, emptyset) | f in "Cons"]\
@@ -194,7 +194,7 @@ $
   )\
   &evalexit(p) &&= evalentry(p)\
 
-$ <eq:RVPostExecConstraintModified>
+$ <eq:RVPostExecTransferModified>
 
 The definitions of SafeReach and Sources are not changed, but we include it here for convenience sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definitions. This means that references to parameters and free variables behave similarly to references of local variable, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
 $
@@ -230,21 +230,21 @@ $
   &S &&= "MapLat"("Src" -> U) \
 $ <eq:UtilAnalysisLattices>
 
-We then modify the constraint functions $evalbracket("_") : "Node" -> S$. The pre-execution constraints are quite simple, as shown in @eq:UtilAnalysisConstraintGen1. Construction call sites are initialized to $bot$, while parameters and free variables are initialized to $top$ since we do not know its initial utilization.
+We then modify the transfer functions $evalbracket("_") : "Node" -> S$. @eq:UtilAnalysisTransferGen1 shows the modified pre-execution transfer function. In the initial state, construction call sites are set to $bot$, while parameters and free variables are set to $top$ since we do not know its initial utilization.
 
 $
   &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" } union { x |-> top | x in "NonLocal" }\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
-$ <eq:UtilAnalysisConstraintGen1>
+$ <eq:UtilAnalysisTransferGen1>
 
-As for the post-execution constraints, there are only two main cases. The first case is returning a utilizable types, in which we mark the safely-reachable values of the returned expression as utilized.
+As for the post-execution transfer functions, there are only two main cases. The first case is returning a utilizable types, in which we mark the safely-reachable values of the returned expression as utilized.
 
 $
   &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"]\
 $
 
-The second main case is the constraint for function calls, defined in @eq:UtilAnalysisFuncCall. The constraint is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to free variables.
-
+The second main case is the function call node, defined in @eq:UtilAnalysisFuncCall. The transfer function is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to free variables.
+// TODO: why complicated? explain more
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
   &wide "MarkCall(s)" &&= sp[e |-> top | f in "Cons"]\
@@ -377,7 +377,7 @@ $ <eq:UnifyDef>
 
 TODO: code analysis example
 
-After a single pass of constraints evaluations, the analysis may report any unutilized construction calls in the function as follows.
+After a single pass of transfer functions evaluations, the analysis may report any unutilized construction calls in the function as follows.
 
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 

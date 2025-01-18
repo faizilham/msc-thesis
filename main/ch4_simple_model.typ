@@ -54,15 +54,15 @@ $
 
 The lattice $S$ is a map from references Ref to a utilization status $U$. Given a state $s$ and a reference $x$, $s(x) = u$ is interpreted as "the utilization status of $x$ is guaranteed to be $u$". The utilization status $u$ is interpreted as follows: $bot$ means "not available", UT means "definitely utilized", and $top$ means "unknown".
 
-We then define the constraint functions $evalbracket("_") : "Node" -> S$, with $evalexit(p)$ the program state right after execution of node $p$, and $evalentry(p)$ the program state right before node $p$. For ease of reading, we also use the notation $spx = evalexit(p)$. We defined the post-execution constraints as follows.
+We then define the transfer functions $evalbracket("_") : "Node" -> S$, with $evalexit(p)$ the program state right after execution of node $p$, and $evalentry(p)$ the program state right before node $p$. For ease of reading, we also use the notation $spx = evalexit(p)$. We define the post-execution transfer functions as follows.
 $
   &evalexit(mono("exit")) &&= { x |-> top | x in "Ref" without "Cons" } union { f |-> bot | f in "Cons" } \
   &evalexit(p) &&= join.big_(q in "succ"(p)) evalentry(q)
 $<eq:BackwardPostFunc>
 
-Since the analysis is going backward, we define the initial constraint on the function exit node. All non-construction references are marked with $top$, while construction expressions are marked with $bot$. We mark constructions with $bot$ to accommodate paths where the construction calls never happened, i.e. if the call happened inside a conditional branch. Other nodes' post-execution constraints are simply the joined state of its successor nodes.
+Since the analysis is going backward, we define the initial state on the function exit node. All non-construction references are marked with $top$, while construction expressions are marked with $bot$. We mark constructions with $bot$ to accommodate paths where the construction calls never happened, i.e. if the call happened inside a conditional branch. Other nodes' post-execution transfer functions are simply the joined state of its successor nodes.
 
-We define the pre-execution constraints in @eq:BackwardPreFunc. There are four important cases here. The first two cases are function call expressions `$e = $f(...)`. If it is a `create` call with label $f in "Cons"$, then the utilization of construction call site $f$ is equal to the result's utilization. If it is a `utilize` call, then the argument expression $a$ is marked as utilized.
+We define the pre-execution transfer functions in @eq:BackwardPreFunc. There are four important cases here. The first two cases are function call expressions `$e = $f(...)`. If it is a `create` call with label $f in "Cons"$, then the utilization of construction call site $f$ is equal to the result's utilization. If it is a `utilize` call, then the argument expression $a$ is marked as utilized.
 $
   &evalentry(mono("p:" lbl(e) = lbl(f)())) &&= spx[f |-> spx(e) | lbl(f) = mono("create")]\
   &evalentry(mono("p:" lbl(e) = lbl(f)(lbl(a)))) &&= spx[a |-> "UT" | lbl(f) = mono("utilize")]\
@@ -73,7 +73,7 @@ $ <eq:BackwardPreFunc>
 
 The next case is the variable access expression `$e = x`, where the utilization of expression label $e$ is propagated to variable $x$. We use meet operation to make sure that if $x$ is already utilized in the current path, it should remain so. The last cases are the variable declaration and assignment `(var) x := $e`. It is quite similar with the variable access expression, but with resetting the utilization of $x$ to $top$. This is because any values assigned prior to this node is "hidden" by the current assignment and cannot be traced to any future `utilize`, therefore the utilization status is unknown.
 
-The analysis runs for a single pass of constraint evaluations. This means a loop will be analyzed like an if statement, that is either the loop never runs or runs exactly once. For the utilization analysis purpose, this is already close enough to a fixpoint since utilization cases for singular values (i.e. not a list or a collection) inside loops are quite rare and can be regarded as an error. We will discuss handling collections of utilizable values later. Based on the program state at function start, the analysis produces the set of warnings as follows.
+The analysis runs for a single pass of transfer functions evaluation. This means a loop will be analyzed like an if statement, that is either the loop never runs or runs exactly once. For the utilization analysis purpose, this is already close enough to a fixpoint since utilization cases for singular values (i.e. not a list or a collection) inside loops are quite rare and can be regarded as an error. We will discuss handling collections of utilizable values later. Based on the program state at function start, the analysis produces the set of warnings as follows.
 
 $
   "Warnings" = {f | f in "Cons" and evalentry(mono("start"))(f) leqsq.not "UT" }
@@ -160,13 +160,13 @@ $
   &S_"RV" &&= "MapLat"("Ref" -> (R, O))
 $
 
-We then define the constraint functions $evalbracket("_") &&: "Node" -> S_"RV"$. For convenience, we also use the notations $sp, rpe(x),$ and $ope(x)$, defined as  $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. First we set the pre-execution constraints at function start. For the reachable values, any non-construction expressions and variables are mapped to empty set, while construction calls are mapped to the singleton set of itself. No constructions are occluded at the beginning.
+We then define the transfer functions $evalbracket("_") &&: "Node" -> S_"RV"$. For convenience, we also use the notations $sp, rpe(x),$ and $ope(x)$, defined as  $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. First we set the pre-execution state at the function's starting node. For the reachable values, any non-construction expressions and variables are mapped to empty set, while construction calls are mapped to the singleton set of itself. No constructions are occluded at the beginning.
 $
   &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "Cons" } union {f |-> ({f}, emptyset) | f in "Cons"} \
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 $
 
-As for the post-execution constraints, there are four main cases, which are construction calls, variable access expressions, variable declarations, and assignments.
+As for the post-execution transfer functions, there are four main cases, which are construction calls, variable access expressions, variable declarations, and assignments.
 
 $
   &evalexit(mono("p:" lbl(e) = lbl(f)())) &&= sp[e |-> ({f}, emptyset) | f in "Cons"]\
@@ -199,27 +199,26 @@ The SafeReach function returns the reachable value set if it only contains a sin
 
 The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that are alive exclusively from each other. Construction calls $f$ and $g$ are exclusively alive if there are no program path that calls both $f$ and $g$. In other words, the CFG nodes in which $f$ and $g$ are called, which are $mono(p_f: lbl(e_f) = f(...))$ and $mono(p_g: lbl(e_g) = g(...))$, are not ancestor of each other.
 
-We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that are not exclusively alive, i.e. one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus excludively alive to each other.
+We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that are not exclusively alive, i.e. one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus exclusively alive to each other.
 
-// TODO:
 ] /* End of Safely Reachable Value */
 
 #[
 #let evalbracket = evalbracket.with(sub:"UA")
 #let evalentry = evalentry.with(sub:"UA")
 #let evalexit = evalexit.with(sub:"UA")
+// #show math.equation.where(block: true): set block(spacing: 1em)
 
 === Utilization analysis with safely-reachable values
 
-A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the similar lattices as in the backward analysis.
+A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the same lattices as in the backward analysis.
 
 $
   U = "OrderLat"(angles(bot, "UT", top)) \
-  S = "MapLat"("Cons" -> U) \
+  S = "MapLat"("Cons" -> U)
 $
 
-
-The constraint functions $evalbracket("_") :: "Node" -> S$ are defined by @eq:ForwardUtil, given $sp = evalentry(p)$.
+The transfer functions $evalbracket("_") :: "Node" -> S$ are defined by @eq:ForwardUtil, given $sp = evalentry(p)$.
 
 $
   &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" }\
@@ -232,7 +231,7 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:ForwardUtil>
 
-There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After a single pass of constraints evaluations, the analysis can report the warning based on the utilization status at exit nodes.
+There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After a single pass of transfer functions evaluations, the analysis can report the warning based on the utilization status at exit nodes.
 
 $
 "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not "UT" }
