@@ -222,11 +222,10 @@ $
 #let evalentry = evalentry.with(sub:"UA")
 #let evalexit = evalexit.with(sub:"UA")
 
-We modify the forward analysis to handle function utilization effects. We first define the lattices for the data analysis as shown in @eq:UtilAnalysisLattices. The utilization status lattice $U$ is a powerset lattice of the set ${NU, UT}$, where $NU$ is not utilized and $UT$ is utilized. The abstract program state lattice $S$ is a map from a value source to the utilization status lattice.
+We modify the forward analysis to handle function utilization effects. We first define the lattices for the data analysis as shown in @eq:UtilAnalysisLattices. The utilization status lattice $U$ is a flat lattice of the set ${NU, UT}$, where $NU$ is not utilized and $UT$ is utilized. The abstract program state lattice $S$ is a map from a value source to the utilization status lattice.
 
 $
-  // &U &&= "OrderLat"(angles(bot, "UT", top)) \
-  &U &&= (powerset({NU, UT}), subset.eq) \
+  &U &&= "FlatLat"({NU, UT}) \
   &S &&= "MapLat"("Src" -> U) \
 $ <eq:UtilAnalysisLattices>
 

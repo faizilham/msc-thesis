@@ -18,7 +18,7 @@ A lattice $(S, leqsq)$ is the partial order of set $S$ defined by a binary relat
 
 The least upper bound of a set $X subset.eq S$, usually denoted by $join.big X$, is an element $y in S$ such that every $x in X$ is $x leqsq y$. On the other hand, the greatest lower bound of a set $X subset.eq S$, denoted by $meet.big X$, is an element $y in S$ such that every $x in X$ is $y leqsq x$. The binary operations $x join y$ (join) and $x meet y$ (meet) are also used for denoting $join.big {x, y}$ and $meet.big {x, y}$ respectively #citep(<MollersSPA>, [39]). In a complete lattice, the least upper bound element and the greatest lower bound element to $S$ itself are usually notated as $top$ (top) and $bot$ (bottom) elements respectively.
 
-In a data-flow analysis, lattices are used to represent abstract states of a program. For example, suppose that we want to analyze whether a floating point number is a real number ($R$), an infinity ($infinity$), a "not a number" value (NaN), or an unknown value. We can represent the sign information with the set #box($F = {bot, R, infinity, "NaN", top}$) and the lattice $(F, leqsq)$, with the binary relation $leqsq$ defined as $bot leqsq x$ and $x leqsq top$ for all $x in F$. We can also illustrate the lattice as a graph shown in @fig:SignLattice.
+In a data-flow analysis, lattices are used to represent abstract states of a program. For example, suppose that we want to analyze whether a floating point number is a real number ($R$), an infinity ($infinity$), a "not a number" value (NaN), or an unknown value. We can represent the sign information with the set #box($F = {bot, R, infinity, "NaN", top}$) and the lattice $(F, leqsq)$, with the binary relation $leqsq$ defined as $bot leqsq x$ and $x leqsq top$ for all $x in F$. We can also illustrate the lattice as a graph shown in @fig:FloatLattice.
 
 #figure(caption: "Floating point number lattice")[
 #diagram(
@@ -38,7 +38,7 @@ In a data-flow analysis, lattices are used to represent abstract states of a pro
       edge((0, 1), (0,2))
       edge((1, 1), (0,2))
     }
-)] <fig:SignLattice>
+)] <fig:FloatLattice>
 
 === Transfer functions and monotonicity
 
@@ -149,9 +149,61 @@ $
   m_1 leqsq m_2 equiv forall a in A . m_1(a) attach(leqsq, br: L) m_2(a)
 $
 
-A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A$, with subset or equal ($subset.eq$) as the ordering operator.
+A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $A$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ can be illustrated as @fig:PowsetLattice.
 
-A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the ordering defined as $bot leqsq a leqsq top$, for all $a in A$.
+#figure(caption: "Example of a powerset lattice")[
+#diagram(
+    node-defocus: -1,
+		node((0,0), [${a, b, c}$]),
+		node((-1,1), [${a, b}$]),
+		node((0,1), [${a, c}$]),
+		node((1,1), [${b, c}$]),
+    node((-1,2), [${a}$]),
+		node((0,2), [${b}$]),
+		node((1,2), [${c}$]),
+		node((0,3), [$emptyset$]),
+    {
+      edge((0,0), (-1, 1))
+      edge((0,0), (0, 1))
+      edge((0,0), (1, 1))
+
+      edge((-1, 1), (-1, 2))
+      edge((-1, 1), (0, 2))
+
+      edge((0, 1), (-1, 2))
+      edge((0, 1), (1, 2))
+
+      edge((1, 1), (0, 2))
+      edge((1, 1), (1, 2))
+
+
+      edge((-1, 2), (0,3))
+      edge((0, 2), (0,3))
+      edge((1, 2), (0,3))
+    }
+)] <fig:PowsetLattice>
+
+A flat lattice $"FlatLat"(A)$ is a lattice $(A union {bot, top}, leqsq)$, with the partial ordering defined as $bot leqsq a leqsq top$, for all $a in A$. @fig:FlatLattice illustrates the flat lattice of set ${a, b, c}$.
+
+#figure(caption: "Example of a flat lattice")[
+#diagram(
+    node-defocus: 0,
+    node-inset: 5pt,
+		node((0,0), [$top$]),
+		node((-1,1), [$a$]),
+		node((0,1), [$b$]),
+		node((1,1), [$c$]),
+		node((0,2), [$bot$]),
+    {
+      edge((0,0), (-1, 1))
+      edge((0,0), (0, 1))
+      edge((0,0), (1, 1))
+
+      edge((-1, 1), (0,2))
+      edge((0, 1), (0,2))
+      edge((1, 1), (0,2))
+    }
+)] <fig:FlatLattice>
 
 A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
