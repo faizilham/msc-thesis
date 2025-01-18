@@ -1,23 +1,51 @@
 #import "../lib/utilities.typ": *
 #import "../lib/symbols.typ": *
+#import "@preview/fletcher:0.5.4" as fletcher: diagram, node, edge
 
 = Preliminaries
 
-In this chapter, we discuss the background knowledge needed for the research and review research literature related to the unused return value analysis problem.
+In this chapter, we discuss the background knowledge needed and the common mathematical notations we used in this research.
 
-== Data flow analysis with monotonic framework
+== Data flow analysis with monotone framework
 
-TODO:
+A classical technique for statically analyzing programs is the data-flow analysis #citep(<MollersSPA>, 51) . To define a data-flow analysis, we first start with the control-flow graph (CFG) of the analyzed program and a complete lattice of finite height, representing the abstract information that we want to analyze from the program. For each node in the graph, we define equations (or sometimes inequalities) of the abstract information lattice in relation to the other nodes, usually the predecessor or successor nodes. These equations or inequalities are called transfer functions or constraint functions.
 
-#cite(<MollersSPA>)
-#cite(<NielsonPPA>)
+If the transfer functions are monotonic, there is a unique least solution that can be computed by a fix-point algorithm. The combination of a complete lattice and a set of monotonic transfer functions is called the monotone framework, first described by Kam and Ullman (1977) @KamUllmanMonotoneDFA. We shall discuss the main parts of a data-flow analysis, the lattice and monotonic transfer functions, in more detail.
 
-- lattice
-- DFA
-- monotone fixpoint
+=== Lattice
+
+A lattice $(S, leqsq)$ is the partial order of set $S$ defined by a binary relation $leqsq$, where for each pair of elements $x, y in S$, there is a least upper bound and a greatest lower bound of the set ${x, y}$ #citep(<MollersSPA>, [39]). A complete lattice is a lattice $(S, leqsq)$ in which for any $X subset.eq S$, there is a least upper bound and greatest lower bound of $X$.
+
+The least upper bound of a set $X subset.eq S$, usually denoted by $join.big X$, is an element $y in S$ such that every $x in X$ is $x leqsq y$. On the other hand, the greatest lower bound of a set $X subset.eq S$, denoted by $meet.big X$, is an element $y in S$ such that every $x in X$ is $y leqsq x$. The binary operations $x join y$ (join) and $x meet y$ (meet) are also used for denoting $join.big {x, y}$ and $meet.big {x, y}$ respectively #citep(<MollersSPA>, [39]). In a complete lattice, the least upper bound element and the greatest lower bound element to $S$ itself are usually notated as $top$ (top) and $bot$ (bottom) elements respectively.
+
+In a data-flow analysis, lattices are used to represent abstract states of a program. For example, suppose that we want to analyze whether a floating point number is a real number ($R$), an infinity ($infinity$), a "not a number" value (NaN), or an unknown value. We can represent the sign information with the set #box($F = {bot, R, infinity, "NaN", top}$) and the lattice $(F, leqsq)$, with the binary relation $leqsq$ defined as $bot leqsq x$ and $x leqsq top$ for all $x in F$. We can also illustrate the lattice as a graph shown in @fig:SignLattice.
+
+#figure(caption: "Floating point number lattice")[
+#diagram(
+    node-defocus: 0,
+    node-inset: 5pt,
+		node((0,0), [$top$]),
+		node((-1,1), [$R$]),
+		node((0,1), [$infinity$]),
+		node((1,1), [NaN]),
+		node((0,2), [$bot$]),
+    {
+      edge((0,0), (-1, 1))
+      edge((0,0), (0, 1))
+      edge((0,0), (1, 1))
+
+      edge((-1, 1), (0,2))
+      edge((0, 1), (0,2))
+      edge((1, 1), (0,2))
+    }
+)] <fig:SignLattice>
+
+=== Transfer functions and monotonicity
+
+=== Reachable definitions analysis
 
 == Types and effects system
-TODO: types and effect system from #cite(<NielsonPPA>)
+TODO: types and effect system from @NielsonPPA
 
 
 == The Kotlin programming language
@@ -127,4 +155,4 @@ A flat lattice $"FlatLat"(A)$ is a lattice of set $A union {bot, top}$, with the
 
 A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
 
-A transfer function, or a constraint function, equation in a data-flow analysis is denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represent the program state equation at the entry point of node $p$ and the exit point of $p$. We also use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`.
+The transfer functions, or constraint functions, equations in a data-flow analysis are denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represents the program state equation at the entry point of a node $p$ and the exit point of $p$. We use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`. For example, the notation $evalexit(mono(p : "return" lbl(e))) = ...$ denotes the equation for a return statement node $p$.

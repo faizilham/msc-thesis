@@ -1,7 +1,7 @@
 #import "../lib/symbols.typ": *
 #import "../lib/utilities.typ": *
 
-= Proof of safely-reachable property <apx:SafeReachProof>
+= Proof of Safely-Reachable Property <apx:SafeReachProof>
 
 #[ /* Start of Safely Reachable Value */
 #set math.equation(numbering: none)

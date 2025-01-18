@@ -1,7 +1,7 @@
 #import "../lib/symbols.typ": *
 #import "../lib/utilities.typ": *
 
-= Summary and Future Works
+= Summary
 
 In summary, we present a data flow analysis for tracking the utilization of values, and implement it as a Kotlin compiler plugin. Using Kotlin's annotation feature, we extend the function signature with utilization status and effect notation. Our analysis produce warnings on unutilized values, check the correct utilization status and effect for each function call, and perform a basic annotation inference for lambda functions.
 
