@@ -1,6 +1,7 @@
 #import "../lib/utilities.typ": *
 #import "../lib/symbols.typ": *
-#import "@preview/fletcher:0.5.4" as fletcher: diagram, node, edge
+#import pkg-fletcher as fletcher: diagram, node, edge
+#import pkg-curryst: rule, proof-tree
 
 = Preliminaries
 
@@ -81,11 +82,17 @@ $ <eq:ReachingDefAnalysis>
 
 The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At program start, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we replace the mapping of the variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
 
+== Effect system
+An effect is an abstract information about what happened when a part of a program is executed #citep(<NielsonPPA>, 17), such as whether an exception might be raised or which system calls are called by the program. To analyze effects, the type system of a programming language is extended with an effect system, in which annotations are typically added to the function type representing informations related to its internal computation. This is quite different to an annotated type system, since the effect annotation is inherent to the function itself, and not the input or the output of the function #citep(<NielsonPPA>, 323).
 
+We can extend the function type notation $(t_1, .., t_n) -> t_ret$ with the effect annotation $phi$ as #box($(t_1, .., t_n) ->^phi t_ret$), or sometimes written as $(t_1, .., t_n) -> t_ret andef phi$. The definition of the effect annotation depends on what kind of effects we want to analyze, but it usually is a set. For example, in exception analysis, the effect annotation $phi$ is defined as a set of exceptions, while in side-effect analysis the effect annotation can be a set of system calls such as console operations, file handling operations, memory allocations, etc.
 
-== Types and effects system
-TODO: types and effect system from @NielsonPPA
+Since the effect system is an extension of type system, we may also include polymorphic effect and sub-effecting rules in the typing judgment. @eq:SubeffectingRule shows a typical sub-effecting rule added to the typing judgment. Notice that the sub-effecting is covariant to the function subtyping.
 
+$
+  #let th = $hat(tau)$
+  #proof-tree(rule($th_1 -> th_2 andef phi <= th'_1 -> th'_2 andef phi'$, $th'_1 <= th_1$, $th_2 <= th'_2$, $phi subset.eq phi'$))
+$ <eq:SubeffectingRule>
 
 == The Kotlin programming language
 

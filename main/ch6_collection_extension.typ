@@ -1,12 +1,13 @@
 #import "../lib/symbols.typ": *
 #import "../lib/utilities.typ": *
+#import pkg-curryst: rule, proof-tree
 
 = Handling Collection Types and Other Extensions
 
 A common utilization tracking case is tracking the utilization of a collection of utilizable values, such as a list of deferred calls. Individually tracking the items inside the collection is very hard if not downright uncomputable. It is more practical to treat the utilization of the items as a whole collection. To allow this, we need to maintain an invariant: the utilization status of a collection of utilizable values is always the same to all its items' utilization statuses. This means that the collection type's primitive methods, such as map, filter and add, need to have utilization annotation in their signature to ensure that the invariant is held.
 
 #[
-#show math.equation.where(block: true): set block(spacing: 1em)
+#show math.equation.where(block: true): set block(spacing: 1.1em)
 
 == Utilization annotation in function signature
 
@@ -14,10 +15,30 @@ We extend the effectful function signature $(t_1, ..., t_n) -> t_ret andef PiEf 
 
 $
 f : (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union PhiEf\
-"where" utv_i ::= NU | UT | top | omega
+"where" utv_i : Utv, "and" Utv ::= NU | UT | top | omega
 $
 
-The utilization annotation $utv$ is either a utilization status from the set ${NU, UT, top}$ or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization status of at least $utv_i$, such that given $u_a$ the utilization status of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization status of the returned value. This way, we can also model functions that return an already-utilized value. As a matter of convenience, we treat a parameter or return type without annotation as annotated with $top$. For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
+The utilization annotation $utv$ is either a concrete utilization status ($NU$, $UT$, or $top$) or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization status of at least $utv_i$, such that given $u_a$ the utilization status of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization status of the returned value. By default, we treat a parameter or return type without annotation as annotated with $top$.
+
+TODO: Utilization status subtyping judgment
+
+$
+  #proof-tree(rule(name:"[U-Id]",$utv <= utv$, $utv : Utv$))
+  #h(5em)
+  #proof-tree(rule(name:[[$top$-SupTy]], $utv <= top$, $utv : Utv$))
+  \ \
+  #proof-tree(rule(name: "[U-SubTy]",
+    $(ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret <= (ann(utv'_1) t'_1, ..., ann(utv'_n) t'_n) -> ann(utv'_ret) t'_ret$,
+    $i in [1..n]$,
+    $t'_i <= t_i$,
+    $utv'_i <= utv_i$,
+    $t_ret <= t'_ret$,
+    $utv_ret <= utv'_ret$)
+  )\ \
+  #proof-tree(rule(name: "[Fn-Call]", $Gamma tack f(a_1, ..., a_n) : ann(utv_ret) t_ret$, $f : (ann(utv_1) t_1, ...,ann(utv_n) t_n) -> ann(utv_ret) t_ret$, $Gamma tack a_i : ann(utv'_i) t'_i$, $t'_i <= t_i$, $utv'_i <= utv_i$))
+$
+
+For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
 
 $
   "utilizeAll" :: (C[a]) -> "Unit" andef {1 |-> EfU}\
@@ -169,8 +190,7 @@ The warnings for mismatched effects are still quite similar, with the main diffe
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, s_"fin" (p_i)) }\
 "GetEff"(utv, u) = cases(
-    EfN & "if" u = utv and utv != {omega},
-    EfN & "if" u = {gamma_"fin" (omega)} and utv = {omega},
+    EfN & "if" u = utv != {omega}", or" utv = {omega} and u = {gamma_"fin" (omega)},
     EfU &"if" u = {UT},
     EfI &"if" u = {NU},
     EfX &"otherwise"

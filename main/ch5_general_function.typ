@@ -1,5 +1,6 @@
 #import "../lib/symbols.typ": *
 #import "../lib/utilities.typ": *
+#import pkg-curryst: rule, proof-tree
 
 = Generalized Utilization Analysis
 
@@ -55,7 +56,7 @@ To complete our definition, we also allow functions to invalidate previously-uti
 As we previously discussed, functions may affect the utilization of its arguments and free variables. We define the set of utilization effects $Ef$ in @eq:UtilEffects, where $EfU$ means it utilizes the value, $EfI$ means it invalidates the value's utilization, $EfN$ means it does not affect the value, and $EfX$ means unknown effect.
 
 $
-  Ef = {EfU, EfI, EfN, EfX}
+  Ef := EfU | EfI | EfN | EfX
 $ <eq:UtilEffects>
 
 We then extend the function type signature after its return type with effect notations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
@@ -63,8 +64,8 @@ We then extend the function type signature after its return type with effect not
 $
   f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\
   "where"
-  PiEf = {1 |-> ef_1, .., n |-> ef_n},\
-  wide quad PhiEf = {v |-> ef_v | v in "FV"(f)}
+  PiEf : "Index" |-> Ef = {1 |-> ef_1, .., n |-> ef_n},\
+  wide quad PhiEf : "FV" |-> Ef = {v |-> ef_v | v in "FV"(f)}
 $ <eq:FuncSignWithEffects>
 
 The functions previously shown in @lst:TopLevelUtilEx and the lambda function `lam` in @lst:LambdaUtilEx can be annotated as follows.
@@ -89,7 +90,24 @@ $ <eq:ApplySignature>
 
 This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
 
-// TODO: - Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
+//  Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
+
+TODO: Sub-effecting judgment
+$
+  #proof-tree(rule(name:"[Eff-Id]",$ef <= ef$, $ef : Ef$))
+  #h(3em)
+  #proof-tree(rule(name:[[$EfX$-SupEff]], $ef <= EfX$, $ef : Ef$))
+  \ \
+  #proof-tree(rule(name:"[Map-SubEff]", $hat(A) <= hat(A)'$, $hat(A) : X |-> Ef$,$hat(A)' : X' |-> Ef$, $X subset.eq X'$, $forall x in X . hat(A)(x) <= hat(A)'(x)$))
+  \ \
+  #proof-tree(rule(name: "[SubEff]", $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf <= (t'_1, ..., t'_n) -> t'_ret andef PiEf' union PhiEf'$, $t'_i <= t_i, i in [1..n]$, $t_ret <= t'_ret$, $PiEf <= PiEf'$, $PhiEf <= PhiEf'$)) \ \
+
+  // #proof-tree(rule(name: "[SubEff]", $t_"fun" andef PiEf union PhiEf <= t'_"fun" andef PiEf' union PhiEf'$, $t_"fun" <= t'_"fun"$, $PiEf <= PiEf'$, $PhiEf <= PhiEf'$)) \ \
+$
+
+
+Given effect maps $hat(A) : X -> Ef$ and $hat(B) : Y -> Ef$, the relation $hat(A) <= hat(B)$ holds if $X subset.eq Y$ and for all $x in X$, $hat(A)(x) <= hat(B)(x)$.
+
 
 == Function alias analysis
 

@@ -51,6 +51,7 @@
 #let RT = $accent(R, breve)$
 
 #let utv = math.accent("u", math.breve)
+#let Utv = math.accent("U", math.breve)
 
 
 #let efv = math.epsilon
