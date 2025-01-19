@@ -52,8 +52,7 @@ In order for the equations to converge, the transfer functions should be monoton
 
 === Reaching definitions analysis
 
-A classical example of a data-flow analysis is the reaching definitions analysis. We use a similar analysis to the reaching definition analysis, and thus we shall discuss the original version.
-
+An example of a data-flow analysis is the reaching definitions analysis. In some parts of the utilization analysis we use a similar analysis to the reaching definition analysis, and thus we shall discuss the classical version.
 The reaching definitions analysis computes which variable assignments might define the values of variables at any points in the program #citep(<MollersSPA>, 71). The lattice used in this analysis is the map of variables to the powerset of assignment statements. For example, given the following program:
 #listing("Program example for reaching definition analysis")[
   ```

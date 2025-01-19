@@ -2,7 +2,7 @@
 
 = Related Works
 
-In this chapter, we review literatures and other researches related to the usage and utilization analysis problem. We first look into static analyses in some programming languages that are similar to the utilization analysis.
+In this chapter, we review literatures and other researches related to the utilization analysis problem. We first look into static analyses in some programming languages that are similar to the utilization analysis.
 
 == Static analyses similar to the utilization analysis
 
@@ -19,12 +19,10 @@ A substructural type system is a type system where at least one of the structura
 
 Depending on which structural properties are held or broken, one may get a different variant of type systems.
   + Unrestricted type systems are the "normal" type systems, where all structural properties hold.
-  + Affine type systems are type systems where only the contraction property is broken, resulting in type systems that require variables to be used at most once.
-  + Relevant type systems are type systems where only the weakening property is broken, resulting in type systems that require variables to be used at least once.
+  + Affine type systems are type systems where only the contraction property is broken, resulting in type systems that require variables to be used at most once. For example, the move semantics of non-copyable values in Rust can be defined with an affine type system @Reed2015PatinaA.
+  + Relevant type systems are type systems where only the weakening property is broken, resulting in type systems that require variables to be used at least once. Our utilization analysis requires values to be utilized at least once, thus it can also be modeled as a variant of relevant type systems.
   + Linear type systems are type systems where both the contraction and weakening properties are broken and the exchange property is held, resulting in type systems that require variables to be used exactly once. This type system is first developed from linear logic #cite(<WadlerLinearTC>), and is among the earliest substructural type systems to be described.
   + Ordered type systems are type systems where all structural properties are broken, resulting in type systems that require variables to be used exactly once and in the same order in which they are declared.
-
-Our unused return value analysis requires some types to be used at least once, thus it can be modeled as a variant of relevant type systems.
 
 Another type system related to the standard substructural type systems is the uniqueness type. Uniqueness type, first introduced by Smetsers et al. in the Clean language #cite(<uniquenessClean>), guarantees the uniqueness of a variable reference, i.e. there is exactly one reference to the variable value. This way, reference aliasing is much easier to handle since there should only be one reference for a unique variable.
 
@@ -32,7 +30,7 @@ Uniqueness type is the dual of the linear type, as formally shown as a unified c
 
 == Other related works
 
-A more fine-grained approach than the standard substructural type system is the graded modal type system based on bounded linear logic presented by Orchard, Liepelt, and Eades #cite(<Granule19>). This type system, which is implemented for the Granule language, allows quantitative reasoning of variable usages. Instead of rougher guarantees like "exactly once", "at most once" or "at least once", the type system allows usage guarantee of a specific range of natural numbers or any semiring structures. A graded type `Int [1..3]` in Granule means that the integer value must be used at least once and at most three times. While we are unlikely to adopt graded modal types in our work, it might be useful to use Granule for modeling our analysis.
+A more fine-grained approach than the standard substructural type system is the graded modal type system based on bounded linear logic presented by Orchard, Liepelt, and Eades #cite(<Granule19>). This type system, which is implemented for the Granule language, allows quantitative reasoning of variable usages. Instead of rougher guarantees like "exactly once", "at most once" or "at least once", the type system allows usage guarantee of a specific range of natural numbers or any semiring structures. A graded type `Int [1..3]` in Granule means that the integer value must be used at least once and at most three times.
 
 Zimmerman et al. #cite(<latte2023>) presented Latte, a lightweight aliasing tracking for Java with minimal annotations of unique, shared, or borrowed. Only function parameters and object fields require annotations, whereas local variable uniqueness can be automatically inferred.
 
