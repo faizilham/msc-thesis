@@ -3,7 +3,7 @@
 #set par(linebreaks: "simple", justify: false)
 
 #text(size: 20pt, weight: "bold", [
-    Use it or Lose it: A Kotlin Static Analyzer for Identifying Unused Values
+    Use it or Lose it: A Kotlin Static Analysis for Identifying Unused Values
   ])
 
 #set text(size: 16pt)

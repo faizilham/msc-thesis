@@ -1,9 +1,9 @@
 #import "lib/template.typ": template, front-matter, main-matter, back-matter
 
 #show: template.with(
-  title: [Use it or Lose it: A Kotlin Static Analyzer for Identifying Unused Values],
+  title: [Use it or Lose it: A Kotlin Static Analysis for Identifying Unused Values],
   author: "Faiz Ilham Muhammad",
-  keywords: ()
+  keywords: ("kotlin", "data-flow analysis", "unused value", "utilization")
 )
 
 // #set pagebreak(weak: true)
