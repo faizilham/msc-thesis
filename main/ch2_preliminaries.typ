@@ -222,7 +222,7 @@ Annotation can be used as a simple way to extend Kotlin without changing too muc
 
 In this section, we define some common notations and definitions that we used in this research.
 
-A mapping $s: X -> Y$ is a set of mapping pairs $(x |-> y)$, in which for all $x in X$, there is a $y in Y$ such that $s(x) = y$. The notation $s[x |-> y]$ denotes the replacement of $x$ mapping in $s$ to $y$, such that $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$.
+A mapping $s: X -> Y$ is a set of mapping pairs $(x |-> y)$, which satisfies $abs(s) = abs(X)$ and for all $x in X$, there is a $y in Y$ such that $s(x) = y$. The notation $s[x |-> y]$ denotes the replacement of $x$ mapping in $s$ to $y$, such that $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$.
 
 $
   &s[x |-> y] &&= (s without {x |-> *}) union {x |-> y} \
