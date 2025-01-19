@@ -108,7 +108,7 @@ Another notable feature of the Kotlin type system is the flow-based type inferen
 === Control flow graph in Kotlin
 
 
-We first define a model of control flow graph (CFG) that we use in the data flow analysis. This CFG model is a simplified version of the real control flow graph in the Kotlin compiler.
+We first define a model of control flow graph (CFG) that we use in the data flow analysis. This CFG model is a simplified version of the real control flow graph in the Kotlin compiler #citep(<KotlinSpec2020>, 231).
 
 We assume that each expression and sub-expression in the program's AST is labeled with a unique label $e$. @lst:ExprLabel shows an example of expressions labeling, in which the numbers written in superscript letter are the labels for the corresponding expression.
 #let cfg(body) = text(font: "Consolas", [[#body]])
@@ -128,7 +128,7 @@ fun test(x: Int, y: Boolean) {
 
 Given an expression label $e$, the value of the expression is denoted as $lbl(e)$. For example, using the expression labels in @lst:ExprLabel, the value of $lbl(1)$ is equal to 2, and the value of $lbl(3)$ is equal to $(lbl(1) + lbl(2))$, in other words the evaluation result of $(2 + x)$.
 
-The CFG is built from the AST of the program after type checking and identifier resolving steps are finished. Therefore it is safe to assume that there will no out-of-scope variable accesses or incorrect type assignment when analyzing the CFG. The followings are the types of CFG nodes based on what AST constructs they represent.
+The followings are the types of CFG nodes based on what AST constructs they represent.
 
 + Function start node #cfg[start] and exit node #cfg[exit]. These nodes appear only once at the start and the end of a function body.
 + Literal constant #cfg("$e = <Lit>"), representing constant values such as number or null value.
@@ -196,6 +196,7 @@ The CFG is built from the AST of the program after type checking and identifier 
     )] <fig:CFGTransformExample>
 ]
 
+For our analysis purposes, we can assume that the CFG of the program already passes identifier resolving and type checking steps. Therefore it is safe to assume that there will no out-of-scope variable accesses or incorrect type assignment when analyzing the CFG.
 
 === Annotation
 
@@ -291,6 +292,6 @@ A flat lattice $"FlatLat"(A)$ is a lattice $(A union {bot, top}, leqsq)$, with t
     }
 )] <fig:FlatLattice>
 
-A linearly ordered lattice $"OrderLat"(angles(bot = a_1, ..., a_n = top)) $ is a lattice of set ${a_1, ..., a_n}$ with the ordering defined as $a_i leqsq a_j$ iff. $i <= j$
+A linearly ordered lattice $"OrderLat"(bot = a_1, ..., a_n = top) $ is a lattice $({a_1, ..., a_n}, leqsq)$ with the ordering defined as $a_i leqsq a_j$ if and only if $i <= j$. For example, the ordered lattice $"OrderLat"(a, b, c, d)$ has the ordering $a leqsq b leqsq c leqsq d$, with $a$ and $d$ acting as $bot$ and $top$ elements respectively.
 
 The transfer functions, or constraint functions, equations in a data-flow analysis are denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represents the program state equation at the entry point of a node $p$ and the exit point of $p$. We use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`. For example, the notation $evalexit(mono(p : "return" lbl(e)))$ denotes the equation for a return statement node $p$.
