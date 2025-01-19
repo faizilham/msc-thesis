@@ -366,6 +366,7 @@ We define the unification function $unify$ in @eq:UnifyDef. The unification func
 
 $
   unify (Gamma, ef, ef) = Gamma\
+  unify (Gamma, EfX, ef) = Gamma\
 
   unify (Gamma, epsilon, ef) = Gamma[epsilon |-> Gamma(epsilon) union {ef}]\
 

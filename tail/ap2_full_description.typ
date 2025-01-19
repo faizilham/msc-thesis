@@ -223,6 +223,7 @@ $
 Unification function
 $
   unify (Gamma, ef, ef) = Gamma\
+  unify (Gamma, EfX, ef) = Gamma\
 
   unify (Gamma, epsilon, ef) = Gamma[epsilon |-> Gamma(epsilon) union {ef}]\
 
@@ -230,13 +231,13 @@ $
 
   unify(Gamma, omega, u) = Gamma[omega |-> Gamma(omega) union {u}]\
   unify(Gamma, u, omega) = Gamma[omega |-> Gamma(omega) union {u}]\
-
+$
+$
   unify(Gamma, u, u') = cases(
     Gamma & "if" u' leqsq u,
     "Error" & "otherwise"
   )\
-$
-$
+
   unify (Gamma, PiEf, PiEf') = "combine"(union.big_(i in PiEf) unify(Gamma, PiEf(i), PiEf'(i))) \
 
   unify (Gamma, PhiEf, PhiEf') = "combine"(union.big_(v in PhiEf) unify(Gamma, PhiEf(v), PhiEf'(v))) \

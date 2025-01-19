@@ -111,8 +111,8 @@ Another notable feature of the Kotlin type system is the flow-based type inferen
 We first define a model of control flow graph (CFG) that we use in the data flow analysis. This CFG model is a simplified version of the real control flow graph in the Kotlin compiler.
 
 We assume that each expression and sub-expression in the program's AST is labeled with a unique label $e$. @lst:ExprLabel shows an example of expressions labeling, in which the numbers written in superscript letter are the labels for the corresponding expression.
+#let cfg(body) = text(font: "Consolas", [[#body]])
 
-// ¹²³⁴⁵⁶⁷⁸⁹⁰
 #listing("Expression labeling")[
 ```kotlin
 fun test(x: Int, y: Boolean) {
@@ -122,32 +122,79 @@ fun test(x: Int, y: Boolean) {
     println⁷((a⁸ + 10⁹)¹⁰)¹¹
   }
 
-  val b = (if (y¹²) 1¹³ else 0¹⁴)¹⁵
+  val b = if (y¹²) 1¹³ else 0¹⁴
 }
 ```]<lst:ExprLabel>
 
-
-#let cfg(body) = text(font: "Consolas", [[#body]])
-
 Given an expression label $e$, the value of the expression is denoted as $lbl(e)$. For example, using the expression labels in @lst:ExprLabel, the value of $lbl(1)$ is equal to 2, and the value of $lbl(3)$ is equal to $(lbl(1) + lbl(2))$, in other words the evaluation result of $(2 + x)$.
 
-TODO: nodes explanation and transformation examples
+The CFG is built from the AST of the program after type checking and identifier resolving steps are finished. Therefore it is safe to assume that there will no out-of-scope variable accesses or incorrect type assignment when analyzing the CFG. The followings are the types of CFG nodes based on what AST constructs they represent.
 
-important explanations:
-- variable declaration can only be once per path & variable, i.e. no ancestor declaration / assignment
-- assignment always have at least 1 declaration ancestor
-- etc
++ Function start node #cfg[start] and exit node #cfg[exit]. These nodes appear only once at the start and the end of a function body.
++ Literal constant #cfg("$e = <Lit>"), representing constant values such as number or null value.
++ Identifier access #cfg("$e = x"), representing accesses to variable or other named references.
++ Variable declaration #cfg("var x (:= $e)") or #cfg("val x (:= $e)"). These nodes are variable declaration nodes with an optional initializer expression. In Kotlin a variable can be declared as mutable with `var` or immutable with `val`. For the ease of formalization, we assume a variable is always mutable. This is safe to do  because if an analysis can handle mutable variables, it is also able to handle immutable variables. \ A variable can only be declared once and must be declared before any assignment. This means that for a variable `x`, there is only one variable declaration node of `x` per program path and there are no assignment node to `x` appearing before the declaration.
++ Variable assignment #cfg("x := $e"), representing an assignment of the value of expression `e` to a variable `x`. As we mentioned earlier, a variable assignment node must be preceded, directly or indirectly, by a variable declaration node of the same variable.
++ When begin #cfg("when_begin($cond)") and end #cfg("when_end"), representing branching statements such as if-else and loops. The `when_begin` node always have two successor nodes, representing the paths if the condition is true or false. In case of a loop, the `when_end` node's next edge points back to the beginning of the conditional expression's node.
++ Function call #cfg([\$e = \$f(\$arg#sub("1"), ..., \$arg#sub("n"))]), representing a call to the function `f`. Notice that `f` is an expression label instead of direct a function identifier. In case of a member an extension function call `x.f()`, we assume that it is transformed to `f(x)` for the ease of formalization.
++ Return statement #cfg("return ($e)"), representing a return statement with an optional expression `e`.
++ Lambda expression #cfg("$e = "+ $lambda$ +".{subgraph}"), representing a lambda expression. The lambda expression has a subgraph, representing the CFG of the lambda function's body.
 
-All AST constructs are transformed into the following CFG nodes.
-+ Function start #cfg[start] and exit #cfg[exit]
-+ Literal constant. #cfg("$e = <Lit>")
-+ Identifier access. #cfg("$e = x")
-+ Variable declaration. #cfg("var x")
-+ Variable assignment. #cfg("x := $val")
-+ When begin #cfg("when_begin($cond)") and end #cfg("when_end")
-+ Function call #cfg([\$e = \$f(\$arg#sub("1"), ... ,\$arg#sub("n"))])
-+ Return statement. #cfg("return $val")
-+ Lambda expression #cfg("$e = "+ $lambda$ +".{subgraph}")
+@fig:CFGTransformExample shows an example of how parts of the program in @lst:ExprLabel are transformed to control flow graph. The CFG part in (a) represents the declaration `val a = 2 + x`, while  the one in (b) represents the declaration `val b = if (y) 1 else 0`.
+
+#[
+  #let d = 0.7
+  #let hd = 0.4
+  #figure(caption: [Parts of control flow graph of the program in @lst:ExprLabel], kind: image)[
+  #grid(
+    columns: (50%, 50%),
+    rows: (auto, auto),
+    row-gutter:2em,
+    align: center,
+    [
+      #v(1.5em)
+      #diagram(
+        node-inset: 3pt,
+        node((0, d), cfg("$1 = 2")),
+        node((0, 2*d), cfg("$2 = x")),
+        node((0, 3*d), cfg("$3 = $1 + $2")),
+        node((0, 4*d), cfg("val a = $3")),
+        {
+          let lineTo(p1, p2) = edge(p1, p2, "-|>")
+          lineTo((0,d), (0, 2*d))
+          lineTo((0,2*d), (0, 3*d))
+          lineTo((0,3*d), (0, 4*d))
+        }
+      )
+    ],
+    [
+      #diagram(
+        node-defocus: 0,
+        node-inset: 3pt,
+        node((0, d), cfg("$12 = y")),
+        node((0, 2*d), cfg("when_begin($12)")),
+        node((-hd, 3*d), cfg("$13 = 1")),
+        node((hd, 3*d), cfg("$14 = 0")),
+        node((-hd, 4*d), cfg("val b = $13")),
+        node((hd, 4*d), cfg("val b = $14")),
+        node((0, 5*d), cfg("when_end")),
+        {
+          let lineTo(p1, p2, ..args) = edge(p1, p2, "-|>", ..args)
+          lineTo((0,d), (0, 2*d))
+          lineTo((0,2*d), (-hd, 3*d), label: [*T*], label-size: 9pt, label-pos: 0.6, label-anchor: "center", label-sep: 6pt)
+          lineTo((0,2*d), (hd, 3*d), label: [*F*], label-size: 9pt, label-pos: 0.6, label-anchor: "center", label-sep: 6pt)
+          lineTo((-hd, 3*d),(-hd, 4*d))
+          lineTo((hd, 3*d),(hd, 4*d))
+
+          lineTo((-hd, 4*d),(0, 5*d))
+          lineTo((hd, 4*d),(0, 5*d))
+        }
+      )
+    ],
+    [(a) Declaration of `a` at line 2],
+    [(b) Declaration of `b` at line 8]
+    )] <fig:CFGTransformExample>
+]
 
 
 === Annotation
@@ -169,12 +216,11 @@ annotation class Ann(val message: String = "")
 }
 ```] <lst:KotlinAnnotation>
 
-Annotation can be used as a simple way to extend Kotlin without changing too much of the syntax. In this research, for example, we can use annotation to mark usage obligations.
-
+Annotation can be used as a simple way to extend Kotlin without changing too much of the syntax. For example, if we want to add an effect system to the function type, we can use annotations in the function signature to represent the effects.
 
 == Common notations and definitions
 
-We shall define some common notations and definitions that we used in this research.
+In this section, we define some common notations and definitions that we used in this research.
 
 A mapping $s: X -> Y$ is a set of mapping pairs $(x |-> y)$, in which for all $x in X$, there is a $y in Y$ such that $s(x) = y$. The notation $s[x |-> y]$ denotes the replacement of $x$ mapping in $s$ to $y$, such that $s[x |-> y]$ equals to s but with $(x |-> *) in s$ replaced with $(x |-> y)$.
 

@@ -244,10 +244,10 @@
   set figure.caption(separator: [ -- ])
 
   show figure.caption: it =>{
-    if it.kind == table {
-      align(center, it)
-    } else {
+    if it.kind == raw {
       align(left, it)
+    } else {
+      align(center, it)
     }
   }
   show figure.where(kind: table): it => {
