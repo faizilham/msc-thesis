@@ -7,10 +7,11 @@
 #show math.equation.where(block: true): set block(spacing: 1em)
 
 #show heading.where(level: 2): set heading(numbering: "A.1")
+#show heading.where(level: 3): set heading(numbering: "A.1.1")
 
 #let Fcal = math.cal("F")
 
-(TODO: formatting) Given a function $Fcal$, we define:
+Given the analyzed function $Fcal$, we define:
 
 $
 &"Node" &&= "The CFG nodes of" Fcal\
@@ -78,7 +79,7 @@ $
   &O &&= (powerset("Cons"), subset.eq)\
   &S &&= "MapLat"("Ref" -> (R, O))\
 $
-
+\
 Transfer functions $evalbracket("_") : "Node" -> S$
 
 $
@@ -104,9 +105,9 @@ $
     sp[x |-> (rpe(e), ope(x) union (rpe (x) sect "Cons" )) ] &"if" x in "LocalVars",
     "error"& "otherwise"
   )\
-  &evalexit(p) &&= evalentry(p)\
-
+  &evalexit(p) &&= evalentry(p)
 $
+\
 
 Safely reachable value sources
 
@@ -144,7 +145,7 @@ $
   &Y &&= "MapLat"(Omega -> powerset({NU, UT}))\
   &Sigma &&=  (S, Y)
 $
-
+\
 #let yp = $gamma_p^circle.small$
 #let ypo = $gamma_p^circle.small.filled$
 
@@ -166,12 +167,11 @@ $
 
   &wide "MarkArgs(s)" &&= sp[c |-> "ApplyEff"(ypo, s(c), ef_i) | c in a'_i and (i |-> ef_i) in PiEf]\
   &wide "MarkFV(s)" &&= sp[c |-> "ApplyEff"(ypo, s(c), ef_v) | c in v' and (v ->ef_v) in PhiEf]\
-
-
   &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
+$$
   &wide u_ret t_ret &&= "ReturnType"(tau_f) \
   &wide ypo &&= yp[omega |-> yp(omega) join Gamma(omega) | omega in yp sect Gamma] \
-  &wide (tau_f andef PiEf union PhiEf), Gamma &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\
+  &wide (tau_f andef PiEf union PhiEf), Gamma wide&&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\
   &wide u_i &&= sp(a'_i) "for each argument value source" a'_i\
   &wide alpha_i &&= "ResolveSign"(p, a_i) "for each" a_i "that is a function" \
   &wide a'_i &&= "Sources"(p, a_i) "for each argument" a_i \
@@ -182,8 +182,8 @@ $
   &evalexit(p) &&= evalentry(p)
 $
 
-Helper functions for function call constraints
-
+=== Helper functions of function call transfer function
+Apply effect
 $
   "ApplyEff"(ypo, u, ef) = cases(
     {UT} &"if" ef = EfU,
@@ -231,8 +231,6 @@ $
 
   unify(Gamma, omega, u) = Gamma[omega |-> Gamma(omega) union {u}]\
   unify(Gamma, u, omega) = Gamma[omega |-> Gamma(omega) union {u}]\
-$
-$
   unify(Gamma, u, u') = cases(
     Gamma & "if" u' leqsq u,
     "Error" & "otherwise"
@@ -255,16 +253,24 @@ $
   unify (Gamma, "_", "_") = "Error"
 $
 
-Analysis result
+#pagebreak()
+== Overall analysis result
+
+Warning about incomplete utilization of local values
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
+Inferred utilization status of the return value
 $
   "ReturnUtil" = union.big_(p in "Node") { c |-> sp(c) | c in "Sources"(p, e), p "is a" mono("return" lbl(e)) "node"}\
 
  u_ret = join.big_(c in "ReturnUtil") "ReturnUtil"(c)\
 $
 
-Warning on return value if $u_ret leqsq.not utv_ret$
+If the analyzed function $Fcal$ is an annotated top-level function, the analysis:
+
+1. Produces warning about the resulting utilization status if $u_ret leqsq.not utv_ret$
+
+2. Warns about incorrect parameters' utilization effects
 
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, s_"fin" (p_i)) }\
@@ -276,7 +282,16 @@ $
   )
 $
 
-Inference on lambda functions
+If the analyzed function $Fcal$ is an lambda function, the analysis:
+
+1. Infers the effect annotations
+
+$
+  PiEf = {i -> "GetEff"(evalexit(mono("exit"))(p_i)) | p_i in "Params" }\
+  PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
+$
+
+2. Infers the utilization status annotations
 
 $
   utv_i = gamma_"fin" (omega_i) "for each" p_i in "Params"\

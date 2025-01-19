@@ -160,7 +160,7 @@ $
   &S_"RV" &&= "MapLat"("Ref" -> (R, O))
 $
 
-We then define the transfer functions $evalbracket("_") &&: "Node" -> S_"RV"$. For convenience, we also use the notations $sp, rpe(x),$ and $ope(x)$, defined as  $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. First we set the pre-execution state at the function's starting node. For the reachable values, any non-construction expressions and variables are mapped to empty set, while construction calls are mapped to the singleton set of itself. No constructions are occluded at the beginning.
+We then define the transfer functions $evalbracket("_") &&: "Node" -> S_"RV"$. For convenience, we also use the notations $sp, rpe(x),$ and $ope(x)$, defined as $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. First we set the pre-execution state at the function's starting node. For the reachable values, any non-construction expressions and variables are mapped to empty set, while construction calls are mapped to the singleton set of itself. No constructions are occluded at the beginning.
 $
   &evalentry(mono("start")) &&= { e |-> (emptyset, emptyset) | e in "Ref" without "Cons" } union {f |-> ({f}, emptyset) | f in "Cons"} \
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
