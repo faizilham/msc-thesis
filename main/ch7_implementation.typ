@@ -3,7 +3,7 @@
 
 = Implementation in Kotlin
 
-In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of [/*TODO:*/cite plugin template] as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph are not exactly identical to the control flow graph implementation in the Kotlin compiler.
+In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of Novozhilov (2024) @DemiurgKotlinPlugin as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph are not exactly identical to the control flow graph implementation in the Kotlin compiler.
 
 // Overall architecture?
 

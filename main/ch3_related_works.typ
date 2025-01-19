@@ -13,7 +13,7 @@ TODO: mention related
 
 // Another similar static analysis is the variable usage analysis, in which the analysis determines which variables is used or not.
 
-Requiring values to be used at least once, which is the heart of utilization analysis, is similar to requiring values or resources to be used at most or exactly once. One popular language that are built upon this principle is Rust (TODO: cite rust), in which non-copyable values can only be used at most once to guarantee memory safety without needing a garbage collector. These kinds of resource usage restrictions are often defined using a substructural type system.
+Requiring values to be used at least once, which is the heart of utilization analysis, is similar to requiring values or resources to be used at most or exactly once. One popular language that are built upon this principle is Rust @klabnik2023rust, in which non-copyable values can only be used at most once to guarantee memory safety without needing a garbage collector. These kinds of resource usage restrictions are often defined using a substructural type system.
 
 == Substructural type system
 
