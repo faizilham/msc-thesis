@@ -269,8 +269,7 @@ Warning on return value if $u_ret leqsq.not utv_ret$
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, s_"fin" (p_i)) }\
 "GetEff"(utv, u) = cases(
-    EfN & "if" u = utv and utv != {omega},
-    EfN & "if" u = {gamma_"fin" (omega)} and utv = {omega},
+    EfN & "if" u = utv != {omega}", or" utv = {omega} and u = {gamma_"fin" (omega)},
     EfU &"if" u = {UT},
     EfI &"if" u = {NU},
     EfX &"otherwise"
