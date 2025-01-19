@@ -6,12 +6,7 @@ In this chapter, we review literatures and other researches related to the usage
 
 == Static analyses similar to the utilization analysis
 
-Many languages include unused value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack many of the properties we want in this research. For example, in Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a value is always deemed to be used if it passed as a parameter to any kind of functions, unlike the criteria for value utilization. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
-
-TODO: mention related
-- variable usage analysis
-
-// Another similar static analysis is the variable usage analysis, in which the analysis determines which variables is used or not.
+Many languages include unused variable and unused return value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack the properties we want for ensuring utilization. For example, the Kotlin compiler report any unused variables or parameters, it does not report any unused return values. In Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a value is always deemed to be used if it passed as a parameter to any kind of functions, unlike the criteria for value utilization. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
 
 Requiring values to be used at least once, which is the heart of utilization analysis, is similar to requiring values or resources to be used at most or exactly once. One popular language that are built upon this principle is Rust @klabnik2023rust, in which non-copyable values can only be used at most once to guarantee memory safety without needing a garbage collector. These kinds of resource usage restrictions are often defined using a substructural type system.
 
