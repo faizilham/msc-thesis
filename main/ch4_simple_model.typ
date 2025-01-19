@@ -48,7 +48,7 @@ $
 
 We then defined the lattices used in the data flow analysis. We defined the utilization status lattice $U$ and the abstract program state lattice $S$.
 $
-  U &= "OrderLat"(bot, "UT", top) \
+  U &= "LinearLat"(bot, "UT", top) \
   S &= "MapLat"("Ref" -> U) \
 $
 
@@ -214,7 +214,7 @@ We provide the full proof of this property in @apx:SafeReachProof. In short, we 
 A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the same lattices as in the backward analysis.
 
 $
-  U = "OrderLat"(bot, "UT", top) \
+  U = "LinearLat"(bot, "UT", top) \
   S = "MapLat"("Cons" -> U)
 $
 

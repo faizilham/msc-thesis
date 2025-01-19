@@ -236,7 +236,7 @@ $
 
 A map lattice $"MapLat"(X -> Y)$ is a lattice $(X -> Y, attach(leqsq, br: Y))$, which is the mapping from set $X$ to lattice $(Y, attach(leqsq, br: Y))$, and its ordering ($leqsq$) is equivalent to the ordering of lattice $Y$ ($attach(leqsq, br: Y)$). This means that given the map lattices $m_1, m_2 : X -> Y$, the property $m_1 leqsq m_2$ holds if and only if $y_1 attach(leqsq, br: Y) y_2$ for all $a in X$, $(a |-> y_1) in m_1$ and $(a |-> y_2) in m_2$.
 
-A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $A$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ can be illustrated as @fig:PowsetLattice.
+A powerset lattice $(powerset(X), subset.eq)$ is a lattice of the powerset of $X$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $X$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ can be illustrated as @fig:PowsetLattice.
 
 #figure(caption: "Example of a powerset lattice")[
 #diagram(
@@ -270,7 +270,7 @@ A powerset lattice $(powerset(A), subset.eq)$ is a lattice of the powerset of $A
     }
 )] <fig:PowsetLattice>
 
-A flat lattice $"FlatLat"(A)$ is a lattice $(A union {bot, top}, leqsq)$, with the partial ordering defined as $bot leqsq a leqsq top$, for all $a in A$. @fig:FlatLattice illustrates the flat lattice of set ${a, b, c}$.
+A flat lattice $"FlatLat"(X)$ is a lattice $(X union {bot, top}, leqsq)$, with the ordering defined as $bot leqsq x leqsq top$, for all $x in X$. @fig:FlatLattice illustrates the flat lattice of set ${a, b, c}$.
 
 #figure(caption: "Example of a flat lattice")[
 #diagram(
@@ -292,6 +292,6 @@ A flat lattice $"FlatLat"(A)$ is a lattice $(A union {bot, top}, leqsq)$, with t
     }
 )] <fig:FlatLattice>
 
-A linearly ordered lattice $"OrderLat"(bot = a_1, ..., a_n = top) $ is a lattice $({a_1, ..., a_n}, leqsq)$ with the ordering defined as $a_i leqsq a_j$ if and only if $i <= j$. For example, the ordered lattice $"OrderLat"(a, b, c, d)$ has the ordering $a leqsq b leqsq c leqsq d$, with $a$ and $d$ acting as $bot$ and $top$ elements respectively.
+A linearly ordered lattice $"LinearLat"(bot = x_1, ..., x_n = top) $ is a lattice $({x_1, ..., x_n}, leqsq)$ with the ordering defined as $x_i leqsq x_j$ if and only if $i <= j$. For example, the linear lattice $"LinearLat"(a, b, c, d)$ has the ordering $a leqsq b leqsq c leqsq d$, with $a$ and $d$ acting as the $bot$ and $top$ elements respectively.
 
 The transfer functions, or constraint functions, equations in a data-flow analysis are denoted with the notation $evalentry(p)$ and $evalexit(p)$, which respectively represents the program state equation at the entry point of a node $p$ and the exit point of $p$. We use the notation $evalbracket(p":" mono("<pattern>"))$ to indicate that the node $p$ matches with the CFG node `<pattern>`. For example, the notation $evalexit(mono(p : "return" lbl(e)))$ denotes the equation for a return statement node $p$.
