@@ -199,7 +199,8 @@ $ <eq:RVTransferFunc>
 In the construction call case, the call expression is simply mapped to the singleton set of the construction function. In the variable access expresssion case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to the current variable reference, denoted by the variable-node pair $(x, p)$. This is quite important since we want to distinguish when assignment from variable to variable happened. In the case of variable declaration, the variable $x$ is mapped to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
 
 When the analysis reaches a fixpoint, we can define the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
-
+#[
+#show math.equation.where(block: true): set block(spacing: 1em)
 $
   &"SafeReach"(p, e) &&= cases(
     r_e & "if" abs(r_e) <= 1,
@@ -213,12 +214,26 @@ $
   )\
   &&&"where" sigma = "SafeReach"(p, e)
 $ <eq:ForwardSafeReachFunc>
+]
 
-The SafeReach function returns the reachable value set if it only contains a single value. Otherwise, it returns non-occluded construction sites. The Sources function merely resolve a singleton set of variable reference $(x, p')$ into its safely-reachable set.
-
-The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that are exist exclusively from each other.
+The SafeReach function returns the reachable value set if it only contains a single value. Otherwise, it returns non-occluded construction sites. The Sources function merely resolve a singleton set of variable reference $(x, p')$ into its safely-reachable set. The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that exist exclusively.
 
 We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that do not exist exclusively, such that one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus exist exclusively to each other.
+
+@eq:SafelyReachableAnalysisEx shows an example of the result of the analysis, with `Src(a)` the resolved safely-reachable values of `a` at that point. Notice that at line 9, the references ${C_1, C_3, (b, L_7)}$ are reachable, but since $C_1$ is occluded and reference to $b$ is not the only reference, only $C_3$ is safely-reachable.
+
+#listing("Example of safely-reachable values analysis")[
+```kotlin
+var a = create() /*C1*/   // a -> ({C1}, {}), Src(a) = {C1}
+val b = create() /*C2*/   // b -> ({C2}, {}}
+
+if(...) {
+  a = create() /*C3*/     // a -> ({C3}, {C1}), Src(a) = {C3}
+} else if (...) {
+  a = b                   // a -> ((b,L7), {C1}), Src(a) = Src(b) = {C2}
+}
+// a -> {{C1, C3, (b,L7)}, {C1}}, Src(a) = {C3}
+```] <eq:SafelyReachableAnalysisEx>
 
 ] /* End of Safely Reachable Value */
 
@@ -252,24 +267,27 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:ForwardUtil>
 
-There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After a single pass of transfer functions evaluations, the analysis can report the warning based on the utilization status at exit nodes.
+There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked as not utilization. The other case is the `utilize` call, in which we resolve the arguments into safely-reachable construction call labels and mark them as utilized.
+
+After a single pass of transfer functions evaluations, the analysis can report the warning based on the utilization status at exit nodes.
 
 $
 "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not UT }
 $
 
-An example of the analysis result can be seen in @lst:ForwardUtilExample. We also show in the example the values of $"Sources"(p, x)$ when $x$ is updated. Similar to the backward analysis, the forward analysis also reports error on call $C_1$ and not $C_2$. However, the utilization state updates only happened on function calls, since the variable related cases are only relevant during safely-reachable values analysis.
+An example of the analysis result can be seen in @lst:ForwardUtilExample. We also show in the example the values of $"Sources"(p, x)$ when $x$ is updated. Similar to the backward analysis, the forward analysis also reports error on call $C_1$ and not $C_2$. Notice that we only update the program state during function calls.
+// However, the utilization state updates only happened on function calls, since the variable related cases are only relevant during safely-reachable values analysis.
 
 #listing("Example of forward analysis states")[
 ```kotlin
 fun test() {                   // s1 = {C1: ⊥, C2: ⊥}
-  val a = create() /*C1: Err*/ // s2 = s1[C1: 0]; SRC(L2,a)={C1}
+  val a = create() /*C1: Err*/ // s2 = s1[C1: 0]; Src(a)={C1}
   val b =
     if (/*cond3*/) {
-      create() /*C2: OK*/      // s3 = s2[C2: 0]; SRC(L5,b)={C2}
+      create() /*C2: OK*/      // s3 = s2[C2: 0]; Src(b)={C2}
     } else {
-      a                        // s4 = s2; SRC(L7,b)={(a,L7)}
-    } // val b := $if          // s5 = s3⊔s4 = {C1: 0, C2: 0}; SRC(L8,b)={C2}
+      a                        // s4 = s2; Src(b)={C1}
+    }                          // s5 = s3⊔s4 = {C1: 0, C2: 0}; Src(b)={C2}
   if (/*cond4*/) {
     utilize(a)                 // s6 = s5[C1: 1]
   }                            // s7 = s6 ⊔ s5 = {C1: ⊤, C2: 0}
