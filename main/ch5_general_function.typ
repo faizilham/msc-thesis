@@ -6,8 +6,6 @@
 
 While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
-The `passThrough` function behavior is quite unintuitive at the first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
-
 #listing("Top level functions utilization examples")[```kt
 fun utilizeTwo(a: Utilizable, b: Utilizable) { // Utilize a and b
   utilize(a)
@@ -23,6 +21,10 @@ fun passThrough(a: Utilizable) : Utilizable {
   return a
 }
 ```] <lst:TopLevelUtilEx>
+
+The `passThrough` function behavior is quite unintuitive at the first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
+
+
 
 Lambda functions behave in a similar way to top-level functions, but one main difference is that lambda functions may also affect the utilization of its free variables, that is the variables declared on the higher-level scope than the lambda function's body. @lst:LambdaUtilEx shows the example of lambda functions effect on utilization. In the `testLambda` function, the lambda function assigned to variable `lam` uses its first argument and the free variable `b`. Therefore, the values in `a` and `b` are utilized after the `lam(a)` call.
 
@@ -48,18 +50,18 @@ fun invalidateErr() {
 
 A lambda function may also change the values of mutable free variables, as shown in the `invalidateErr` function in the given example. We decide to regard any mutation of free variable by a lambda function as a possible error, and thus the example is reported as an error when it should be alright. This is because tracking the reference changes and values escapes through the free variables complicates the analysis too much, while in practice free-variable mutating lambda functions are rarely used.
 
-To complete our definition, we also allow functions to invalidate previously-utilized values into unutilized values. We define the primitive `unutilize` as a mirror to `utilize`. While invalidating utilization cases are quite rare, it is useful to have a complete definition with only few changes.
+From the given examples, we can conclude that a function can utilize of a parameter (or free variable) or does not affect them. In other words, given a parameter's utilization status $u$, a function may change it to $UT$ ("definitely utilized") as a side effect or keep it as $u$. The utilization status lattice, however, also consist of the values $NU$ ("definitely not utilized") and $top$ ("maybe utilized or not"). Changing the utilization to $top$ may happen if we do not have any information about the function, and thus the analysis need to over-approximate. While there are not many examples of functions that need to change the utilization back to $NU$, it is useful to model it for the sake of completion.
 
 
 == Utilization effects
 
-As we previously discussed, functions may affect the utilization of its arguments and free variables. We define the set of utilization effects $Ef$ in @eq:UtilEffects, where $EfU$ means it utilizes the value, $EfI$ means it invalidates the value's utilization, $EfN$ means it does not affect the value, and $EfX$ means unknown effect.
+We define the set of utilization effects $Ef$ in @eq:UtilEffects, where, given $u$ the initial utilization status of a parameter or free variable, $EfU$ means it utilizes the value (changing $u$ to $UT$), $EfI$ means it invalidates the value's utilization (changing $u$ to $NU$), $EfN$ means it does not affect the value (keeping it to $u$), and $EfX$ means unknown effect (changing $u$ to $top$).
 
 $
   Ef := EfU | EfI | EfN | EfX
 $ <eq:UtilEffects>
 
-We then extend the function type signature after its return type with effect annotations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
+We then extend the function type signature after its return type with effect annotations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
 
 $
   f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\
@@ -68,7 +70,22 @@ $
   wide quad PhiEf : "FV" |-> Ef = {v |-> ef_v | v in "FV"(f)}
 $ <eq:FuncSignWithEffects>
 
-The functions previously shown in @lst:TopLevelUtilEx and the lambda function `lam` in @lst:LambdaUtilEx can be annotated as follows.
+ All effects are subeffects to the unknown effect $EfX$, such that $ef <= EfX$ for all $ef : Ef$. If we were to define the utilization effect as a type and effect system, @eq:EffectJudgment shows the required judgment rules.
+
+$
+  #proof-tree(rule(name:"[Eff-Id]",$ef <= ef$, $ef : Ef$))
+  #h(3em)
+  #proof-tree(rule(name:[[$EfX$-SupEff]], $ef <= EfX$, $ef : Ef$))
+  \ \
+  #proof-tree(rule(name:"[Map-SubEff]", $hat(A) <= hat(A)'$, $hat(A) : X |-> Ef$,$hat(A)' : X' |-> Ef$, $X subset.eq X'$, $forall x in X . hat(A)(x) <= hat(A)'(x)$))
+  \ \
+  #proof-tree(rule(name: "[SubEff]", $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf <= (t'_1, ..., t'_n) -> t'_ret andef PiEf' union PhiEf'$, $t'_i <= t_i, i in [1..n]$, $t_ret <= t'_ret$, $PiEf <= PiEf'$, $PhiEf <= PhiEf'$))
+$ <eq:EffectJudgment>
+
+// Given effect maps $hat(A) : X -> Ef$ and $hat(B) : Y -> Ef$, the relation $hat(A) <= hat(B)$ holds if $X subset.eq Y$ and for all $x in X$, $hat(A)(x) <= hat(B)(x)$.
+
+
+For example, the functions previously shown in @lst:TopLevelUtilEx and the lambda function `lam` in @lst:LambdaUtilEx can be annotated as follows.
 
 $
   "utilizeTwo" : ("Utilizable", "Utilizable") -> "Unit" andef { 1 |-> EfU, 1 |-> EfU}\
@@ -81,33 +98,13 @@ Notice how `newUtilizable` does not have an effect since it only creates a new v
 
 === Parametric utilization effect
 
-Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x)`, which applies the function `f` with the value `x`, can be annotated as follows.
+Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions can also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x) = f(x)`, which applies the function `f` with the value `x`, can be annotated as follows.
 
 $
   "apply" : ((A) -> B andef { 1 |-> epsilon } union phiEf, A ) -> B andef { 2 |-> epsilon } union phiEf\
-  "apply"(f,x) = f(x)
 $ <eq:ApplySignature>
 
-This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects.
-
-//  Why disallow annotating $Theta$ (esp. in top level functions) with explicit set, but allow for parametric $theta$ from input function: hard to reason with global states, but allows scope function to apply localized effect
-
-TODO: Sub-effecting judgment
-$
-  #proof-tree(rule(name:"[Eff-Id]",$ef <= ef$, $ef : Ef$))
-  #h(3em)
-  #proof-tree(rule(name:[[$EfX$-SupEff]], $ef <= EfX$, $ef : Ef$))
-  \ \
-  #proof-tree(rule(name:"[Map-SubEff]", $hat(A) <= hat(A)'$, $hat(A) : X |-> Ef$,$hat(A)' : X' |-> Ef$, $X subset.eq X'$, $forall x in X . hat(A)(x) <= hat(A)'(x)$))
-  \ \
-  #proof-tree(rule(name: "[SubEff]", $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf <= (t'_1, ..., t'_n) -> t'_ret andef PiEf' union PhiEf'$, $t'_i <= t_i, i in [1..n]$, $t_ret <= t'_ret$, $PiEf <= PiEf'$, $PhiEf <= PhiEf'$)) \ \
-
-  // #proof-tree(rule(name: "[SubEff]", $t_"fun" andef PiEf union PhiEf <= t'_"fun" andef PiEf' union PhiEf'$, $t_"fun" <= t'_"fun"$, $PiEf <= PiEf'$, $PhiEf <= PhiEf'$)) \ \
-$
-
-
-Given effect maps $hat(A) : X -> Ef$ and $hat(B) : Y -> Ef$, the relation $hat(A) <= hat(B)$ holds if $X subset.eq Y$ and for all $x in X$, $hat(A)(x) <= hat(B)(x)$.
-
+This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects. Currently, we only allow top-level functions' free variable annotation to be either parametric (as variable $phiEf$) or empty ($PhiEf = emptyset$) to prevent effect on global variables. This is because we limit the analysis to be a local, intra-procedural analysis.
 
 == Function alias analysis
 
@@ -194,7 +191,7 @@ $
   &evalentry(p) &&= &&join.big_(q in "pred"(p)) evalexit(q) \
 $ <eq:RVPreExecTransferModified>
 
-We also redefine the post-execution transfer functions in @eq:RVPostExecTransferModified, given entrance state $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. The equations are similar to the one in the simplified model, with the main difference when handling parameter and non-local variables. Since we require parameters and free variables to be immutable references, we report an error when there is a reassignment to them.
+We also redefine the post-execution transfer functions in @eq:RVPostExecTransferModified1 and @eq:RVPostExecTransferModified2, given entrance state $sp = evalentry(p)$ and $(rpe(x), ope(x)) = sp(x)$. The equations are similar to the one in the simplified model, with the main difference when handling parameter and non-local variables. Since we require parameters and free variables to be immutable references, we report an error when there is a reassignment to them.
 
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (...))) &&= sp[e |-> ({f}, emptyset) | f in "Cons"]\
@@ -202,7 +199,8 @@ $
     sp[e |-> ({ (x, p) }, emptyset) ] &"if" x in "LocalVars",
     sp[e |-> ({x}, emptyset)] &"otherwise"
   )\
-
+$  <eq:RVPostExecTransferModified1>
+$
   &evalexit(mono("p: var" x := lbl(e))) &&=
     sp[x |-> (rpe(e), emptyset) ]\
 
@@ -212,7 +210,7 @@ $
   )\
   &evalexit(p) &&= evalentry(p)\
 
-$ <eq:RVPostExecTransferModified>
+$ <eq:RVPostExecTransferModified2>
 
 The definitions of SafeReach and Sources are not changed, but we include it here for convenience sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definitions. This means that references to parameters and free variables behave similarly to references of local variable, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
 $
