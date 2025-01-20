@@ -144,12 +144,12 @@ $ <eq:FuncAliasTransfers>
 
 The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
 
-We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise it returns the function type without utilization effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
+We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise, it returns the function type with unknown utilization effects since we cannot guarantee what are the effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
 $
   &"ResolveSign"(p, e) &&= cases(
     "signature"(f) & f in "Func",
-    tau_f andef emptyset & "otherwise",
+    tau_f andef {i |-> EfX | i "param of" tau_f} & "otherwise",
   )\
   &&& "where" f = evalexit(p)(e), "type"(lbl(e)) = tau_f\
 $ <eq:ResolveSign>
@@ -240,7 +240,7 @@ $
 #let evalentry = evalentry.with(sub:"UA")
 #let evalexit = evalexit.with(sub:"UA")
 
-We modify the forward analysis to handle function utilization effects. We first define the lattices for the data analysis as shown in @eq:UtilAnalysisLattices. The utilization status lattice $U$ is a flat lattice of the set ${NU, UT}$, where $NU$ is not utilized and $UT$ is utilized. The abstract program state lattice $S$ is a map from a value source to the utilization status lattice.
+We modify the utilization analysis to handle effects. We first define the lattices for the utilization analysis as shown in @eq:UtilAnalysisLattices. The utilization status lattice $U$ is the same as before. The program state lattice $S$ is modified to be a mapping from any value sources Src since we also want to track non-local values such as parameters and free variables.
 
 $
   &U &&= "FlatLat"({NU, UT}) \
@@ -260,11 +260,11 @@ $
   &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"]\
 $
 
-The second main case is the function call node, defined in @eq:UtilAnalysisFuncCall. The transfer function is quite complicated since it is a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to free variables.
-// TODO: why complicated? explain more
+The second main case is the function call node, defined as follows.
+
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= ("MarkFV" compose "MarkArgs" compose "MarkCall")(sp),  "where:"\
-  &wide "MarkCall(s)" &&= sp[e |-> top | f in "Cons"]\
+  &wide "MarkCall(s)" &&= sp[f |-> NU | f in "Cons"]\
   &wide "MarkArgs(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_i) | c in a'_i and (i |-> ef_i) in PiEf]\
   &wide "MarkFV(s)" &&= sp[c |-> "ApplyEff"(s(c), ef_v) | c in v' and (v ->ef_v) in PhiEf]\
   &wide tau_f andef PiEf union PhiEf &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n))\
@@ -273,7 +273,8 @@ $
   &wide v' &&= "Sources"(p, v) "given" v "a free variable of" f
 $ <eq:UtilAnalysisFuncCall>
 
-The analysis sets the utilization of the arguments and the free variables based on the function effects by using the ApplyEff function shown as follows.
+The transfer function is essentially a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, that is by setting $f$ to $NU$ if it is a construction call (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to the safely-reachable values of free variables. The effect-applying function in MarkArgs and MarkFV is defined in @eq:ApplyEff, which simply returns a new utilization status according to the effect. Before the applications of the three marking functions, however, the analysis first resolves safely-reachable values of each arguments and free variables, and also check and instantiate the signature of $f$ based on the arguments it receives.
+
 #[
 // Temporarily decrease block spacing here
 #show math.equation.where(block: true): set block(spacing: 1em)
@@ -284,13 +285,16 @@ $
     top "," &"if" ef = EfX,
     u "," &"if" ef = EfN,
   )\
-$
+$ <eq:ApplyEff>
 ]
+
+This transfer function is much more complicated than the one in the simplified problem for two reasons. First, any functions can now create new utilizable values, change utilization of its parameters and free variables, or both. This is why the transfer function is a composition of the three marking functions. Second, we allow functions have parametric effects in order to be able to handle higher-order functions; hence, the function signature must be instantiated and checked based on the received arguments.
+
 === Instantiating function signatures
 
-Before applying the effects, however, the analysis need to resolve the function signature using the ResolveSign function from the function alias analysis, and then instantiate the signature with the resolved arguments. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
+As we mentioned earlier, the analysis need to instantiate the signature with based on the resolved arguments before applying the effects. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
 
-As an example, suppose that we have higher-order functions `apply(f,a)` and `applyU(f,a)` that pass the value $a$ to the function $f$. The signatures of these functions are shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
+For example, suppose that we have higher-order functions `apply(f,a)` and `applyU(f,a)` that pass the value $a$ to the function $f$. The signatures of these functions are shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
 #[
 // Temporarily decrease block spacing here
 #show math.equation.where(block: true): set block(spacing: 1em)
@@ -382,11 +386,6 @@ $
 
   unify (Gamma, "_", "_") = "Error"
 $ <eq:UnifyDef>
-
-// TODO:
-// - This only instantiate up to second order. Design reason:
-//   + Kotlin does not support currying / partial function application
-//   + A function returning a function is rare in Kotlin codebase
 
 ] /* End of Utilization Analysis with Signature */
 

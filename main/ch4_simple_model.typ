@@ -3,7 +3,9 @@
 
 = A Simple Utilization Analysis
 
-We start with a simplified version of the problem. In this version of the problem, the utilizable values can only be constructed by the function `create()` and utilized by the function `utilize(u)`. Other functions do not affect the values' utilization status. The goal of the utilization analysis is to find which utilizable values are guaranteed to be utilized and which are not. A value is guaranteed to be utilized if all program execution paths starting from its `create` call always reach a `utilize` call. Any `create` calls may have a path not reaching a `utilize` call should be reported as an error.
+We start with a simplified version of the problem. In this version, the utilizable values can only be constructed by the function `create()` and utilized by the function `utilize(u)`. Other functions do not affect the values' utilization status, and we purposefully ignore any utilization through higher-order functions and collection types.
+
+The goal of the utilization analysis is to find which utilizable values are guaranteed to be utilized and which are not. A value is guaranteed to be utilized if all program execution paths starting from its `create` call always reach a `utilize` call. Any `create` calls may have a path not reaching a `utilize` call should be reported as an error. Using this simplified model, we want to focus first on ensuring the soundness of the analysis in regards to reference alias problem.
 
 #listing("Utilization tracking in the simplified model")[
 ```kotlin
@@ -26,7 +28,12 @@ fun simple() {
 }
 ```] <lst:SimpleModelExample>
 
-@lst:SimpleModelExample shows an example of utilization tracking in this simplified model, with each `create` call marked with "OK" or "Error" as the expected result of the analysis. In the example, the value constructed by the `create` call $C_1$ can always reach a `utilize` call via variable `a` or variable `a1`. Both values from calls $C_2$ and $C_3$ are utilized through the variable `b`. The call $C_4$ is the first error example. In this case, the value is not utilized if the conditional expression `cond3` is true and `cond4` is false. On the other hand, the value from call $C_5$ is always utilized through variable `d1`, since if `cond3` is false the call $C_5$ never happened and no value is created. The same case also applies to the call $C_6$ and $C_7$.
+@lst:SimpleModelExample shows an example of utilization tracking in this simplified model, especially in regards to the reference alias problem. Each `create` is call marked with "OK" or "Error" as the expected result of the analysis. Observe that:
++ The value constructed by the `create` call $C_1$ can always reach a `utilize` call via variable `a` or variable `a1`.
++ Both values from calls $C_2$ and $C_3$ are utilized through the variable `b`.
++ The call $C_4$ is the first error example. In this case, the value is not utilized if the conditional expression `cond3` is true and `cond4` is false.
++ In contrast to $C_4$, the value $C_5$ is always utilized through variable `d1`, since if `cond3` is false the call $C_5$ never happened and no value is created.
++ The same case also applies to the call $C_6$ and $C_7$.
 
 There are two ways to approach the problem. The first one is to trace paths backward from a `utilize` call to the `create` calls. The second one is to trace paths forward from a `create` calls to `utilize` calls.
 
@@ -52,7 +59,7 @@ $
   S &= "MapLat"("Ref" -> U) \
 $
 
-The lattice $S$ is a map from references Ref to a utilization status $U$. Given a state $s$ and a reference $x$, $s(x) = u$ is interpreted as "the utilization status of $x$ is guaranteed to be $u$". The utilization status $u$ is interpreted as follows: $bot$ means "not available", UT means "definitely utilized", and $top$ means "unknown".
+The lattice $S$ is a map from references Ref to a utilization status $U$. Given a state $s$ and a reference $x$, $s(x) = u$ is interpreted as "the utilization status of $x$ is eventually equal to $u$". There are three possible values of utilization status forming a linear lattice: $top$ which means a "maybe not utilized", UT which means "definitely utilized", and $bot$ which means "not created" or "not available".
 
 We then define the transfer functions $evalbracket("_") : "Node" -> S$, with $evalexit(p)$ the program state right after execution of node $p$, and $evalentry(p)$ the program state right before node $p$. For ease of reading, we also use the notation $spx = evalexit(p)$. We define the post-execution transfer functions as follows.
 $
@@ -73,7 +80,7 @@ $ <eq:BackwardPreFunc>
 
 The next case is the variable access expression `$e = x`, where the utilization of expression label $e$ is propagated to variable $x$. We use meet operation to make sure that if $x$ is already utilized in the current path, it should remain so. The last cases are the variable declaration and assignment `(var) x := $e`. It is quite similar with the variable access expression, but with resetting the utilization of $x$ to $top$. This is because any values assigned prior to this node is "hidden" by the current assignment and cannot be traced to any future `utilize`, therefore the utilization status is unknown.
 
-The analysis runs for a single pass of transfer functions evaluation. This means a loop will be analyzed like an if statement, that is either the loop never runs or runs exactly once. For the utilization analysis purpose, this is already close enough to a fixpoint since utilization cases for singular values (i.e. not a list or a collection) inside loops are quite rare and can be regarded as an error. We will discuss handling collections of utilizable values later. Based on the program state at function start, the analysis produces the set of warnings as follows.
+The analysis runs for a single pass of transfer functions evaluation. This means a loop will be analyzed like an if statement, that is either the loop never runs or runs exactly once. This is because for utilization analysis, we only need to determine whether a value is utilized at least once. Based on the program state at function start, the analysis produces the set of warnings as follows.
 
 $
   "Warnings" = {f | f in "Cons" and evalentry(mono("start"))(f) leqsq.not "UT" }
@@ -97,19 +104,20 @@ fun test() {                    //s10 = {C1: ⊤, C2: UT, ...}
   utilize(b)                    // s2 = s1[b: UT]
 }                               // s1 = {C1: ⊥, C2: ⊥, * : ⊤}
 ```] <lst:BackwardExample>
-
-
 ]
 
 == Forward analysis
 
-The backward analysis works quite well in the simplified problem and has the advantage of not requiring variable value tracking. However, we found that later in the generalized version of the problem, there are some aspects of the analysis that are easier to handle if we have information on past utilizations of values. The backward analysis, by its nature, only provide information about future utilizations. We found that while making future utilization guarantee is less straightforward in the forward analysis, it is still easier to reason with than making past utilization guarantee in the backward analysis.
+The backward analysis works quite well in the simplified problem and has the advantage of not requiring variable value tracking.
+However, we find it hard to generalize the backward analysis to meet our goals. This is especially true for utilization status pre-requisites, which is required to handle types like collection and file handler type. The backward analysis provides _future_ guarantees for past executions, while the utilization pre-requisites needs _past_ guarantees. To provide past guarantees, we need a forward-moving analysis instead of a backward one. In this section, we shall define the forward analysis of the simplified problem that will become the base for the generalized analysis.
 
 The forward utilization analysis is divided in two parts, which are safely-reachable value analysis and the utilization analysis itself. We divide the analysis into two parts for the ease and clarity of the definitions, but in practice it is possible and more efficient to combine both of them into a single analysis, since both of them are forward-moving analyses. The main idea of this analysis is to first identify which values constructed by `create` calls are safely-reachable from a variable or an expression, then to mark those values as utilized when it is passed as an argument to a `utilize` call. Any values that may not always be marked as utilized at the end of the function should be reported as an error.
 
 === Safely-reachable values
 
-A set of safely-reachable values is a subset of reachable values from a variable or an expression, in which at most one of the values is alive at the same time. In other words, for each values in the safely-reachable set, either it is the actual referred value during the runtime or it is never created in the first place. Consider the example shown in @lst:SafelyReachableEx. Right after the execution of line 1, the safely-reachable values of variable $a$ is ${C_1, C_2}$, since both $C_1$ and $C_2$ only exist exclusively from each other. Right after line 4, the safely-reachable values of $a$ is ${C_3}$, since it is the last assigned value. Notice that right after the end of the branch statement at line 7, only the values ${C_3, C_4}$ are safely-reachable from $a$. While it is still possible that $a$ might refers to $C_1$ or $C_2$, which happens when conditions at line 3 and 5 fail, it is not safe to assume so. However, it is safe to assume that $a$ may refer to ${C_3, C_4}$, since both exist exclusively with each other and both are not created if $a$ refers to either $C_1$ or $C_2$.
+A set of safely-reachable values is a subset of reachable values from a variable or an expression, in which at most one of the values is alive at the same time. In other words, for each values in the safely-reachable set, either it is the actual referred value during the runtime or it is never created in the first place.
+
+Consider the example shown in @lst:SafelyReachableEx. Right after the execution of line 1, the safely-reachable values of variable $a$ is ${C_1, C_2}$, since both $C_1$ and $C_2$ only exist exclusively from each other. Right after line 4, the safely-reachable values of $a$ is ${C_3}$, since it is the last assigned value. Notice that right after the end of the branch statement at line 7, only the values ${C_3, C_4}$ are safely-reachable from $a$. While it is still possible that $a$ might refers to $C_1$ or $C_2$, which happens when conditions at line 3 and 5 fail, it is not safe to assume so. However, it is safe to assume that $a$ may refer to ${C_3, C_4}$, since both exist exclusively with each other and both are not created if $a$ refers to either $C_1$ or $C_2$.
 
 #listing("Example of safely-reachable values")[
 ```kotlin
@@ -211,12 +219,14 @@ We provide the full proof of this property in @apx:SafeReachProof. In short, we 
 
 === Utilization analysis with safely-reachable values
 
-A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes quite simple: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized. We use the same lattices as in the backward analysis.
+A lot of work for utilization analysis is already done by the safely-reachable analysis. The utilization analysis becomes simpler: resolve the arguments into the set of safely-reachable construction call sites using the Source function, then mark those values as utilized.
+
+We use a quite different lattice than the one in the backward analysis, as shown in @eq:ForwardLattice. Instead of an linearly-ordered lattice of $(bot, "UT", top)$, the utilization lattice $U$ is a flat lattice with the partial ordering #box($bot #h(5pt) leqsq NU, UT leqsq top$). The lattice $U$ has four values: $top$ which means "maybe utilized or not" or "unknown", $UT$ which means "definitely utilized" (equivalent to UT), $NU$ which means "definitely not utilized" and $bot$ which means "not created" or "not accessible". Currently, the utilization status $NU$ is not really useful, but this will become useful when we include utilization pre-requisites later. The program state lattice $S$ is a mapping from the construction calls instead of references since any variables and other expressions are resolved with the Sources function.
 
 $
-  U = "LinearLat"(bot, "UT", top) \
+  U = "FlatLat"({NU, UT}) \
   S = "MapLat"("Cons" -> U)
-$
+$ <eq:ForwardLattice>
 
 The transfer functions $evalbracket("_") :: "Node" -> S$ are defined by @eq:ForwardUtil, given $sp = evalentry(p)$.
 
@@ -224,9 +234,9 @@ $
   &evalentry(mono("start")) &&= { f |-> bot | f in "Cons" }\
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 
-  &evalexit(mono("p:" lbl(e) = lbl(f)"()")) &&= sp[f |-> top, e |-> top | lbl(f) = mono("create")]\
+  &evalexit(mono("p:" lbl(e) = lbl(f)"()")) &&= sp[f |-> NU | lbl(f) = mono("create")]\
 
-  &evalexit(mono("p:" lbl(e) = lbl(f)(lbl(a)))) &&= sp[c |-> "UT" | lbl(f) = mono("utilize") and c in "Sources"(p, a)]\
+  &evalexit(mono("p:" lbl(e) = lbl(f)(lbl(a)))) &&= sp[c |-> UT | lbl(f) = mono("utilize") and c in "Sources"(p, a)]\
 
   &evalexit(p) &&= evalentry(p)\
 $ <eq:ForwardUtil>
@@ -234,26 +244,26 @@ $ <eq:ForwardUtil>
 There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked with the $top$ utilization. The other case is the `utilize` call, in which we first resolve the arguments into safely-reachable construction call labels, and mapped those labels as utilized. After a single pass of transfer functions evaluations, the analysis can report the warning based on the utilization status at exit nodes.
 
 $
-"Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not "UT" }
+"Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not UT }
 $
 
 An example of the analysis result can be seen in @lst:ForwardUtilExample. We also show in the example the values of $"Sources"(p, x)$ when $x$ is updated. Similar to the backward analysis, the forward analysis also reports error on call $C_1$ and not $C_2$. However, the utilization state updates only happened on function calls, since the variable related cases are only relevant during safely-reachable values analysis.
 
 #listing("Example of forward analysis states")[
 ```kotlin
-fun test() {                   // s1 = {C1: ⊥, C2: ⊥, * : ⊤}
-  val a = create() /*C1: Err*/ // s2 = s1[C1: ⊤, a: ⊤]; SRC(L2,a)={C1}
+fun test() {                   // s1 = {C1: ⊥, C2: ⊥}
+  val a = create() /*C1: Err*/ // s2 = s1[C1: 0]; SRC(L2,a)={C1}
   val b =
     if (/*cond3*/) {
-      create() /*C2: OK*/      // s3 = s2[C2: ⊤]; SRC(L5,b)={C2}
+      create() /*C2: OK*/      // s3 = s2[C2: 0]; SRC(L5,b)={C2}
     } else {
       a                        // s4 = s2; SRC(L7,b)={(a,L7)}
-    } // val b := $if          // s5 = s3⊔s4 = {C2: ⊤, ...}; SRC(L8,b)={C2}
+    } // val b := $if          // s5 = s3⊔s4 = {C1: 0, C2: 0}; SRC(L8,b)={C2}
   if (/*cond4*/) {
-    utilize(a)                 // s6 = s5[C1: UT]
-  }                            // s7 = s6 ⊔ s5 = {C1: ⊤, ...}
-  utilize(b)                   // s8 = s7[C2: UT]
-}                              // s9 = s8 = {C1: ⊤, C2: UT, ...}
+    utilize(a)                 // s6 = s5[C1: 1]
+  }                            // s7 = s6 ⊔ s5 = {C1: ⊤, C2: 0}
+  utilize(b)                   // s8 = s7[C2: 1]
+}                              // s9 = s8 = {C1: ⊤, C2: 1}
 ```] <lst:ForwardUtilExample>
 
 

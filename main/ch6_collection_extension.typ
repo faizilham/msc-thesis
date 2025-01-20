@@ -114,7 +114,7 @@ We choose to keep this behavior since we do not have a proper alias tracking. Fo
 The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
-  &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
+  &wide "MarkCall(s)" &&= sp[f |-> u_ret | f in "Cons"]\
   &wide u_ret t_ret &&= "ReturnType"(tau_f) \
   &wide ypo &&= yp[omega |-> yp(omega) join Gamma(omega) | omega in yp sect Gamma] \
   &wide (tau_f andef PiEf union PhiEf), Gamma &&= "Instantiate"("ResolveSign"(p, f), (alpha'_1, .., alpha'_n), (u_1, .., u_n))\

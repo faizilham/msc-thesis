@@ -29,4 +29,4 @@ Department of Information and Computing Sciences\
 Graduate School of Natural Sciences\
 Utrecht University\
 
-#datetime.today().display("[day] [month repr:long] [year]")
+20 January 2025

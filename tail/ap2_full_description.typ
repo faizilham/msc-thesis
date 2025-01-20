@@ -165,9 +165,9 @@ $
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), \ &wide "where:"\
 
+  &wide "MarkCall(s)" &&= sp[f |-> u_ret | f in "Cons"]\
   &wide "MarkArgs(s)" &&= sp[c |-> "ApplyEff"(ypo, s(c), ef_i) | c in a'_i and (i |-> ef_i) in PiEf]\
   &wide "MarkFV(s)" &&= sp[c |-> "ApplyEff"(ypo, s(c), ef_v) | c in v' and (v ->ef_v) in PhiEf]\
-  &wide "MarkCall(s)" &&= sp[e |-> u_ret | f in "Cons"]\
   &wide (... "cont'd")
 $$
   &wide u_ret t_ret &&= "ReturnType"(tau_f) \
