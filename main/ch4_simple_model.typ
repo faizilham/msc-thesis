@@ -294,6 +294,12 @@ fun test() {                   // s1 = {C1: ⊥, C2: ⊥}
   utilize(b)                   // s8 = s7[C2: 1]
 }                              // s9 = s8 = {C1: ⊤, C2: 1}
 ```] <lst:ForwardUtilExample>
-
-
 ]
+
+== Chapter summary
+
+We define a simplified version of the utilization analysis problem by limiting it to only `create` and `utilize` calls. The main goal of formalizing utilization analysis in this simplified version is solving the reference alias problem. We first start with the backward-moving analysis, in which the analysis can simply flow back the utilization status starting from any `utilize` call to a `create` calls. However, this technique is incompatible with our other goal: handling functions that may require certain utilization status.
+
+We then devise the forward-moving analysis that is more compatible with our other goals. The analysis is split into two parts, the safely-reachable value analysis and the utilization analysis. We prove that our safely-reachable value analysis infers sound approximations of safely-reachable values, which are contain values that exist exclusively from each other. The utilization analysis then become simpler. Using the result of the previous analysis, it resolves variables' and expressions' safely-reachable values and mark them as utilized whenever `utilize` calls occur.
+
+This simplified problem, however, is only a small part of the utilization tracking problem. We need to generalize the problem to include any function calls. We shall use the forward-moving analysis as the basis of the general analysis as it is more compatible with the other goals.

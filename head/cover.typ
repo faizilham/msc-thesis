@@ -19,9 +19,9 @@ Faiz Ilham Muhammad
 #v(5%)
 
 *Supervisors:*\
-Alejandro Serrano Mena\
-Wouter Swierstra\
-Marco Vassena
+Wouter Swierstra (Utrecht University)\
+Alejandro Serrano Mena (JetBrains)\
+Marco Vassena (Utrecht University)
 
 #v(20%)
 

@@ -2,25 +2,24 @@
 #import "../lib/utilities.typ": *
 #import pkg-curryst: rule, proof-tree
 
-= Handling Collection Types and Other Extensions
+= Handling Collection and Resource Types
 
 A common utilization tracking case is tracking the utilization of a collection of utilizable values, such as a list of deferred calls. Individually tracking the items inside the collection is very hard if not downright uncomputable. It is more practical to treat the utilization of the items as a whole collection. To allow this, we need to maintain an invariant: the utilization status of a collection of utilizable values is always the same to all its items' utilization statuses. This means that the collection type's primitive methods, such as map, filter and add, need to have utilization annotation in their signature to ensure that the invariant is held.
 
 #[
 #show math.equation.where(block: true): set block(spacing: 1.1em)
 
-== Utilization annotation in function signature
+== Utilization status annotation in function signature
 
-We extend the effectful function signature $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf$ with utilization annotations $utv_i$ in each of the parameter types and the return type as follows.
+We extend the effectful function signature $(t_1, ..., t_n) -> t_ret andef PiEf union PhiEf$ with utilization status annotations $utv_i$ in each of the parameter types and the return type as follows.
 
 $
 f : (ann(utv_1) t_1, ..., ann(utv_n) t_n) -> ann(utv_ret) t_ret andef PiEf union PhiEf\
 "where" utv_i : Utv, "and" Utv ::= NU | UT | top | omega
 $
 
-The utilization annotation $utv$ is either a concrete utilization status ($NU$, $UT$, or $top$) or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization status of at least $utv_i$, such that given $u_a$ the utilization status of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization status of the returned value. By default, we treat a parameter or return type without annotation as annotated with $top$.
+The utilization annotation $utv$ is either a concrete utilization status ($NU$, $UT$, or $top$) or a parametric utilization variable $omega$. A utilization annotation $utv_i$ at the $i$-th parameter indicates that the function requires the argument to have a utilization status of at least $utv_i$, such that given $u_a$ the utilization status of the argument, the analysis would report an error if $u_a leqsq.not utv_i$. A utilization annotation $utv_ret$ at the return type indicates the utilization status of the returned value. By default, we treat a parameter or return type without annotation as annotated with $top$. We may also define the utilization status annotation as an annotated type, with the typing judgment rules shown in @eq:UtilStatusJudgment.
 
-TODO: Utilization status subtyping judgment
 
 $
   #proof-tree(rule(name:"[U-Id]",$utv <= utv$, $utv : Utv$))
@@ -35,9 +34,10 @@ $
     $t_ret <= t'_ret$,
     $utv_ret <= utv'_ret$)
   )\ \
-  #proof-tree(rule(name: "[Fn-Call]", $Gamma tack f(a_1, ..., a_n) : ann(utv_ret) t_ret$, $f : (ann(utv_1) t_1, ...,ann(utv_n) t_n) -> ann(utv_ret) t_ret$, $Gamma tack a_i : ann(utv'_i) t'_i$, $t'_i <= t_i$, $utv'_i <= utv_i$))
-$
+  #proof-tree(rule(name: "[Fn-Call]", $Gamma tack f(a_1, ..., a_n) : ann(utv_ret) t_ret$, $f : (ann(utv_1) t_1, ...,ann(utv_n) t_n) -> ann(utv_ret) t_ret$, $Gamma tack a_i : ann(u'_i) t'_i$, $t'_i <= t_i$, $u'_i <= utv_i$))
+$ <eq:UtilStatusJudgment>
 
+\
 For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
 
 $
@@ -52,7 +52,7 @@ The function `utilizeAll(c)` does not have any utilization status requirement, a
 
 The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization status requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
 
-Other than the collection type, we can also employ both utilization annotation and effect in function signature to model linear-type like resources, such as a file handler type. For example, the primitives of a File type can be annotated as follows.
+Other than the collection type, we can also employ both utilization annotation and effect in function signature to model resource types that is similar to linear types, such as the file handler type. For example, the primitives of a File type can be annotated as follows.
 $
   "open"(s) : ("String") -> ann(NU)"File"\
   "read"(f) : (ann(NU)"File") -> "String"\
@@ -95,7 +95,6 @@ Instead of just concrete utilization statuses {$NU$, $UT$}, we also include the 
 
 We then redefine the transfer functions $evalbracket(p) : "Node" -> Sigma$. We first start with the `start` node, as shown in @eq:UtilAnnoTransferStart. The program state is initialized with each parameter $p_i$ mapped to its utilization annotation $utv_i$, and any utilization variable $omega_i$ that is used in the annotations is mapped to a bottom value.
 #[
-#show math.equation.where(block: true): set block(spacing: 1.1em)
 $
   &evalentry(mono("start")) &&= (
     { f |-> bot | f in "Cons" } union { p_i |-> utv_i | p_i in "Params" } union
@@ -123,10 +122,9 @@ $
 $
 ]
 
-Instead of always marking the utilization of construction call sites to $top$, it now depends on instantiated utilization annotation of the function's return value. We also update the function `ApplyEff` called by `MarkArgs` and `MarkFV`, which now also replaces any occuring utilization variable $omega$ to $ypo(omega)$, that is the latest known assignment value of $omega$ after the signature instantiation.
+Instead of always marking the utilization of construction call sites to $NU$, it now depends on instantiated utilization annotation of the function's return value. We also update the function `ApplyEff` called by `MarkArgs` and `MarkFV`, which now also replaces any occuring utilization variable $omega$ to $ypo(omega)$, that is the latest known assignment value of $omega$ after the signature instantiation.
 
 #[
-// #show math.equation.where(block: true): set block(spacing: 1.2em)
 $
   "ApplyEff"(ypo, u, ef) = cases(
     {UT} &"if" ef = EfU,
@@ -186,7 +184,8 @@ $
  u_ret = join.big_(c in "ReturnUtil") "ReturnUtil"(c)\
 $
 
-The warnings for mismatched effects are still quite similar, with the main difference being the no-effect ($EfN$) requires the final utilization of a parameter to be equal to its prerequisite, annotated utilization $utv$.
+The warnings for mismatched effects are still quite similar, with the main difference being the no-effect ($EfN$) requires the final utilization of a parameter to be equal to its prerequisite, annotated utilization $utv$. @eq:ParamWarning2 shows how this warning is defined.
+
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(utv_i, s_"fin" (p_i)) }\
 "GetEff"(utv, u) = cases(
@@ -195,7 +194,7 @@ $
     EfI &"if" u = {NU},
     EfX &"otherwise"
   )
-$
+$ <eq:ParamWarning2>
 
 The analysis may also infers the utilization annotation of a lambda function. At start, it assign each utilizable parameter $p_i$ with a utilization variable $omega_i$. Then, after transfer function evaluations, the utilization annotation of parameters $utv_i$ and utilization annotation of return value $utv_ret$ are inferred as follows.
 
@@ -205,11 +204,17 @@ $
 $
 ]
 
+== Chapter summary
+
+We extend the function signatures with utilization status annotation. A status annotation can be added to a parameter type, indicating the required utilization status for corresponding argument, or to the return type for indicating the resulting utilization status. Status annotations can also be parametric; this is usually the case for higher-order functions.
+
+To accommodate the status annotations, we only need to change the utilization analysis, since the function alias and safely-reachable values analysis are not directly related to the utilization status requirements. The most significant change is the expansion of the utilization lattice ${bot, NU, UT, top}$ with the utilization variables set, which contains all parametric status annotations in the analyzed function. Because of this expansion, we also need to record what is the instantiated values of the utilization variables, which is added to the program state lattice as the known utilization variable assignment lattice $Y$. The resulting unification environments in the Instantiate function are now recorded in the lattice $Y$ for every function call. This lattice $Y$ is useful for inferring the utilization requirements for lambda functions. Apart from recording the unification environments, the Instantiate function now also checks and instantiates the function signatures according to the arguments' utilization statuses.
+
+By using the combination of utilization status and effect annotations, we can model the utilization of collection types and resource-like types like file handler. We now only need to implement a prototype of the analysis in Kotlin.
+
 /*
-TODO: concrete example
 
 == Parametric inference
-TODO: text
 
 $
   (A -> B andef {1 |-> epsilon} union phiEf, A) -> B andef {2 |-> epsilon} union phiEf \

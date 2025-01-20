@@ -79,7 +79,7 @@ We mentioned earlier that the utilization model can be used to describe linear r
 Since we focus on the Kotlin language, there are two constraints that shall be fulfilled by the analysis method. First, the analysis shall be *based on the intra-procedural data-flow analysis* since it is the main technique used in the Kotlin compiler framework. The second constraint is that we shall *use existing features of Kotlin instead of developing new syntax*, such as using Kotlin's annotation feature. This is because we want the analysis to be compatible with common Kotlin programs as much as possible.
 
 In summary, these are the challenges that shall be addressed in the formalization and implementation of the utilization analysis:
-+ User-defined functions can be annotated with utilization status and effects, and the analysis can check the annotations' correctness.
++ User-defined functions can be annotated with utilization status requirements and effects, and the analysis can check the annotations' correctness.
 + The analysis can infer the utilization status and effects of lambda functions.
 + The analysis can track utilization through type-parametric higher-order functions and collection types.
 + The analysis can soundly handle the reference alias problem.

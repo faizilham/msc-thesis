@@ -2,7 +2,7 @@
 #import "../lib/utilities.typ": *
 #import pkg-curryst: rule, proof-tree
 
-= Generalized Utilization Analysis
+= Generalizing the Analysis to All Functions
 
 While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
@@ -229,8 +229,6 @@ $
 
 ] // End of Reachable Value Analysis Modified
 
-#pagebreak()
-
 == Utilization analysis with function effects
 
 #[ /* Start of Utilization Analysis with Signature */
@@ -295,7 +293,7 @@ As we mentioned earlier, the analysis need to instantiate the signature with bas
 For example, suppose that we have higher-order functions `apply(f,a)` and `applyU(f,a)` that pass the value $a$ to the function $f$. The signatures of these functions are shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
 #[
 // Temporarily decrease block spacing here
-#show math.equation.where(block: true): set block(spacing: 1em)
+// #show math.equation.where(block: true): set block(spacing: 1em)
 
 $
   &"apply"  &&: ((A) -> B andef { 1 |-> epsilon } union phiEf, A) -> B andef { 2 |-> epsilon } union phiEf\
@@ -324,7 +322,7 @@ As we can see in the example, the instantiations of `apply(f,a)` and `apply(g,a)
 
 We define  Instantiate : $("Signature", angles("Signature", ...)) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variable in $PiEf$ and $phiEf$ into environment $Gamma$, and then unify each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
 #[
-#show math.equation.where(block: true): set block(spacing: 1em)
+// #show math.equation.where(block: true): set block(spacing: 1em)
 
 $
   "Instantiate"((t_1, ..., t_n) -> t_ret andef PiEf union phiEf, (alpha_1, ..., alpha_n) ) =\
@@ -364,6 +362,8 @@ $ <eq:ReplaceDef>
 
 // $"combine"(Gamma) = { epsilon -> ef_1 timesef .. timesef ef_n | epsilon in Gamma, {ef_1, .., ef_n} = Gamma(epsilon)}$
 
+#pagebreak()
+
 We define the unification function $unify$ in @eq:UnifyDef. The unification function adds a possible replacement of effect variables $epsilon$ and $phiEf$ to environment $Gamma$ recursively for each parameter in a function type. If the unification does not match, e.g. $unify (EfN, EfU)$, the function returns an error.
 
 $
@@ -373,7 +373,6 @@ $
   unify (Gamma, epsilon, ef) = Gamma[epsilon |-> Gamma(epsilon) union {ef}]\
 
   unify (Gamma, phiEf, PhiEf') = Gamma[phiEf |-> Gamma(phiEf) union {PhiEf'}]\
-
   unify (Gamma, PiEf, PiEf') = "combine"(union.big_(i in PiEf) unify(Gamma, PiEf(i), PiEf'(i))) \
 
   unify (Gamma, PhiEf, PhiEf') = "combine"(union.big_(v in PhiEf) unify(Gamma, PhiEf(v), PhiEf'(v))) \
@@ -390,7 +389,7 @@ $ <eq:UnifyDef>
 
 === Analysis result and effect inference
 
-TODO: code analysis example
+// TODO: code analysis example
 
 After a single pass of transfer functions evaluations, the analysis may report any unutilized construction calls in the function as follows.
 
@@ -416,3 +415,12 @@ $
 $
 
 This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
+
+
+== Chapter summary
+
+We generalize the forward analysis of the simplified problem to be able to handle any functions, including higher-order functions. We first introduce effect annotations to function signatures, indicating how a function affect the utilization statuses of its parameters and free variables: changing the status to utilized, to not-utilized, to an unknown status, or having no effect. Higher-order functions are annotated with parametric effect, such that they may take the effect of the functions passed to them as input arguments.
+
+We introduce a new phase of the analysis, the function alias analysis, that shall run before the reachable value analysis. The function alias analysis determines which functions are actually called and resolve its signatures since we now must handle any kind of functions. We modify the reachable value analysis to include parameters and free variables as value sources aside from the local construction calls. The most significant change is to the utilization analysis, in which a function call may creates a new utilizable value, affects the utilization status of its parameters or free variables, or both. Since effect annotations are also parametric, the analysis must also instantiate and check the annotations based on the input arguments. When the analysis finished, it can check a function's effect annotations for each parameters to make sure that it correctly reflects to what actually happened in the function body. The analysis can also infers a concrete effect annotation for lambda functions.
+
+With the addition of the effect annotations and the generalization to all functions, we achieve our goals of handling any user-defined functions, handling higher-order functions, and the goal of checking and inferring functions' utilization effects. The last thing we have not yet handle is the collection and resource-like types, which requires utilization status annotations.
