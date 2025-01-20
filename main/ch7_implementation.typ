@@ -3,11 +3,11 @@
 
 = Implementation in Kotlin
 
-In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of Novozhilov (2024) @DemiurgKotlinPlugin as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph are not exactly identical to the control flow graph implementation in the Kotlin compiler.
+In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([source code in https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of Novozhilov (2024) @DemiurgKotlinPlugin as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph are not exactly identical to the control flow graph implementation in the Kotlin compiler.
 
 // Overall architecture?
 
-== Annotating utilization and effect
+== Annotating utilizable types, utilization statuses and effects
 
 We use the annotation class feature for annotating utilization statuses and effects in function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization statuses are annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
 
@@ -32,12 +32,22 @@ class MyFile private constructor () {
 ```] <lst:AnnoFileType>
 
 
-In case of a more complex effects, we can annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc can be annotated as shown in @lst:LetAnno.
+Collection types, or any generic type that should be covariant to its parameter in regards to utilization, are annotated with `@UtilizeLike` at the type parameter positions, as shown in @lst:CollectionTypeAnno. This means that for `C<A>` an instantiation of a generic type `C<T>`, which has annotation `@UtilizeLike` at the parameter `T`, `C<A>` is also a utilizable type if and only if `A` is also a utilizable type.
+
+#listing("Annotation for collection type")[
+```kt
+class MyList<@UtilizeLike T> constructor() {
+  ...
+}
+```] <lst:CollectionTypeAnno>
+
+In case of more complex effects, we can annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc can be annotated as shown in @lst:LetAnno.
 
 $
 "let" : A.((A) -> B) -> B \
 "let" : ann(u_a)A.((ann(u_a) A) -> ann(u_b)B andef {1 |-> e} union phi ) -> ann(u_b) B andef {"This" |-> e} union phi
 $ <eq:LetScopeFunc>
+\
 
 #listing("Annotation for let function")[
 ```kt
@@ -63,7 +73,9 @@ fun<A, B> (@Util("ua") A).let1(
   return f(this)
 }*/
 
-== Lattice and function signature data structure
+#pagebreak()
+
+== Lattice data structure
 
 While in Chapter 6 we extend the utilization lattice to include utilization variables $omega$, in practice the utilization variables are currently only useful for inferencing the parameters' initial utilization. In the inference case, each parameter is always assigned with a unique utilization variable. Rather than using a set object to represent the lattice, we model the utilization lattice as a enumeration of `Bot` ($bot$), `UT` ($UT$), `NU` ($NU$) and `Top` ($top$), as shown in @lst:UtilLatClass. Parameters are assigned with bottom value at start, and the implementation simply track the latest known utilization variable value for each function parameters. This is because it is much more efficient to represent the lattice value as a plain enumeration than a set object.
 
@@ -79,6 +91,8 @@ sealed class UtilLattice(private val value: Int): Lattice<UtilLattice> {
   fun leq(other: UtilLattice) = value < other.value || this == other
 }
 ```] <lst:UtilLatClass>
+
+Another common lattices we use in the analysis is the map lattice. We extend the built-in `Map<K,V>` data structure in Kotlin as `DefaultMapLat<K,V>` class, in which any key of type `K` not found in the map lattice is presumed to have a default lattice value, usually either a $bot$ or $top$. This is useful since we do not have to initialize the lattice at start especially in case of free variables. If we instead must initialize free variable mappings in the lattice, we have to traverse the CFG at least once to collect all the free variables _before_ the analysis can start. By defaulting the lattice value, we can minimize unnecessary CFG traversals.
 
 == Handling context object and invoke function
 
