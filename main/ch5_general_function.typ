@@ -55,10 +55,10 @@ From the given examples, we can conclude that a function can utilize of a parame
 
 == Utilization effects
 
-We define the set of utilization effects $Ef$ in @eq:UtilEffects, where, given $u$ the initial utilization status of a parameter or free variable, $EfU$ means it utilizes the value (changing $u$ to $UT$), $EfI$ means it invalidates the value's utilization (changing $u$ to $NU$), $EfN$ means it does not affect the value (keeping it to $u$), and $EfX$ means unknown effect (changing $u$ to $top$).
+We define the set of utilization effects $Ef$ in @eq:UtilEffects, where, given $u$ the initial utilization status of a parameter or free variable, $EfU$ means it utilizes the value (changing $u$ to $UT$), $EfI$ means it invalidates the value's utilization (changing $u$ to $NU$), $EfN$ means it does not affect the value (keeping it to $u$), and $EfX$ means unknown effect (changing $u$ to $top$). Effects may also be parametric, with $epsilon$ an effect variable.
 
 $
-  Ef := EfU | EfI | EfN | EfX
+  Ef := EfU | EfI | EfN | EfX | epsilon
 $ <eq:UtilEffects>
 
 We then extend the function type signature after its return type with effect annotations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
@@ -388,8 +388,6 @@ $ <eq:UnifyDef>
 
 
 === Analysis result and effect inference
-
-// TODO: code analysis example
 
 After a single pass of transfer functions evaluations, the analysis may report any unutilized construction calls in the function as follows.
 

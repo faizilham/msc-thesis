@@ -287,7 +287,7 @@ $
   )
 $
 
-If the analyzed function $Fcal$ is an lambda function, the analysis:
+If the analyzed function $Fcal$ is a lambda function, the analysis:
 
 1. Infers the effect annotations
 

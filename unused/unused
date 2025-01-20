@@ -187,6 +187,63 @@ Based on the challenges we have identified, we formulate three research question
 *
 */
 
+----
+
+
+/*
+
+== Parametric inference
+
+$
+  (A -> B andef {1 |-> epsilon} union phiEf, A) -> B andef {2 |-> epsilon} union phiEf \
+
+  E = "Set of effect variables" = {epsilon_1, ..., epsilon_n}\
+
+  Omega = { omega_i | p_i in "Params" } union{ omega_epsilon | epsilon in E } \
+
+  U = powerset({NU, UT} union Omega) \
+
+
+  "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}} union {i |-> omega_epsilon | i |-> epsilon in PiEf, Gamma(epsilon) = emptyset}\
+
+
+  "ApplyEff"(u, ef) = cases(
+    {UT} "," &"if" ef = EfU,
+    {NU} "," &"if" ef = EfI,
+    {omega_epsilon} "," &"if" ef = epsilon,
+    u "," &"if" ef = EfN,
+  )\
+
+  "GetEff"(utv, u) = cases(
+    EfN & "if" u = utv,
+    EfU &"if" u = {UT},
+    EfI &"if" u = {NU},
+    epsilon &"if" u = {omega_epsilon},
+    EfX &"otherwise"
+  )\
+
+  PiEf = {i -> "GetEff"(evalexit(mono("exit"))(p_i)) | p_i in "Params" }\
+  PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
+
+$
+
+```
+call(f : ... & 1->ef, g: ...& 1->eg, x) = f(x); g(x) --- x = {ef, eg}
+```
+*/
+
+/*
+
+== Usage analysis
+
+here? drop?
+
+- Discardable-ness
+- Same-use
+- Inference of discardable and same-use
+*/
+
+
 ---------
 
 

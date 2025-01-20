@@ -6,7 +6,7 @@
 In summary, we present a data-flow analysis for tracking the utilization of values, and implement it as a Kotlin compiler plugin. Our utilization analysis technique:
 + infers a safe, over-approximation of utilization status of each utilizable values, and produces warnings for any values with incomplete utilization,
 + allows for annotating utilization effects and status requirements in user-defined functions, higher-order functions, collection types, and resource-like types,
-+ checks for incorrect value assignments in regards to the required utilization status and effects,
++ checks for incorrect value assignments in regard to the required utilization status and effects,
 + infers the utilization effect and status annotations for lambda functions.
 
 == Limitations and future works
