@@ -115,9 +115,9 @@ The forward utilization analysis is divided in two parts, which are safely-reach
 
 === Safely-reachable values
 
-A set of safely-reachable values is a subset of reachable values from a variable or an expression, in which at most one of the values is alive at the same time. In other words, for each values in the safely-reachable set, either it is the actual referred value during the runtime or it is never created in the first place.
+The reachable values of a variable or an expression are any values that might be referenced by the variable or an expression. This is quite similar to the reaching definition concept in many classical data-flow analyses. If we mark those reachable values as utilized, for example when there is a utilization call `utilize(x)` to a variable $x$, we cannot be sure if it is correct. This is because during runtime, $x$ can only refer to one of the reachable values, and if the other non-referred reachable values also exist, those values are not actually utilized by `utilize(x)`. However, if we can guarantee that only one of them can exists at the same time (and thus it is the value referenced by $x$), we can safely mark them as utilized. We called this the _safely-reachable_ values.
 
-Consider the example shown in @lst:SafelyReachableEx. Right after the execution of line 1, the safely-reachable values of variable $a$ is ${C_1, C_2}$, since both $C_1$ and $C_2$ only exist exclusively from each other. Right after line 4, the safely-reachable values of $a$ is ${C_3}$, since it is the last assigned value. Notice that right after the end of the branch statement at line 7, only the values ${C_3, C_4}$ are safely-reachable from $a$. While it is still possible that $a$ might refers to $C_1$ or $C_2$, which happens when conditions at line 3 and 5 fail, it is not safe to assume so. However, it is safe to assume that $a$ may refer to ${C_3, C_4}$, since both exist exclusively with each other and both are not created if $a$ refers to either $C_1$ or $C_2$.
+The set of safely-reachable values is a subset of a variable's or an expression's reachable values, in which at most one of the values exist at the same time. In other words, each value in safely-reachable set is _exist exclusively_ from each other, that is either it is the referred value at runtime or it is never created in the first place. Consider the following code example.
 
 #listing("Example of safely-reachable values")[
 ```kotlin
@@ -140,7 +140,18 @@ val c = create() /*C8*/
 a = if(...) b else c                                   // a -> {}
 ```] <lst:SafelyReachableEx>
 
-The safely-reachable values set become less straightforward when the assignment happen through a variable. At line 11 of the code example, variable $a$ can safely reach ${C_5, C_6}$ since both are also safely-reachable from $b$. However, at line 14, while during runtime $a$ may refer to any of the values in the set ${C_1, ..., C_7}$, we can only statically guarantee that $C_7$ is safely reachable from $a$. This is because we can be sure $C_7$ is never created in the first place if $a$ refers to any values other than $C_7$, while the reverse is not necessarily true. Observe that right after line 17, the safely-reachable values set for $a$ is an empty set, since the values referred by variables $b$ and $c$ do not live exclusively with each other. A pattern then emerge: a variable to variable assignment is only safely reachable if it is the only reachable assignment.
+\
+From the examples in @lst:SafelyReachableEx, we can observe that:
++ Right after the execution of line 1, the safely-reachable values of variable $a$ is ${C_1, C_2}$, since both $C_1$ and $C_2$ only exist exclusively from each other
++ Right after line 4, the safely-reachable values of $a$ is ${C_3}$, since it is the last assigned value.
++ After the end of the branch statement at line 7, only $C_3$ and $C_4$ are safely-reachable from $a$.
++ While it is still possible that $a$ might refers to $C_1$ or $C_2$, which happens when the conditions at line 3 and 5 fail, it is not safely-reachable since one of ${C_1, C_2}$ is still created even when $a$ no longer refers to it.
++ In contrast, it is safe to assume that $a$ may refer to ${C_3, C_4}$, since both are exist exclusively from each other and both are not created if $a$ refers to either $C_1$ or $C_2$.
++ At line 11 of the code example, variable $a$ can safely reach ${C_5, C_6}$ since both are also safely-reachable from $b$.
++ At line 14, however, while $a$ may refer to any of the values $C_1$ to $C_7$, only $C_7$ is safely-reachable. This is because $C_7$ is never created if $a$ refers to any values other than $C_7$, while the reverse is not necessarily true.
++ At line 17, the safely-reachable values set for $a$ is an empty set, since the values referred by variables $b$ and $c$ do not exist exclusively with each other.
+
+Based on these observations, we find a pattern: a variable to variable assignment is only safely reachable if it is the only reachable assignment. In contrast, there can be more than one direct value references that are safely-reachable. From a graph-centric perspective, we can also express that given two creation calls $c_a$ and $c_b$, the values returned by $c_a$ and $c_b$ are exist exclusively of each other if there is no program path in which both $c_a$ and $c_b$ are called. In other words, the CFG node of $c_a$ call is not an ancestor to the node of $c_b$ call and vice versa.
 
 
 #[ /* Start of Safely Reachable Value */
@@ -205,9 +216,9 @@ $ <eq:ForwardSafeReachFunc>
 
 The SafeReach function returns the reachable value set if it only contains a single value. Otherwise, it returns non-occluded construction sites. The Sources function merely resolve a singleton set of variable reference $(x, p')$ into its safely-reachable set.
 
-The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that are alive exclusively from each other. Construction calls $f$ and $g$ are exclusively alive if there are no program path that calls both $f$ and $g$. In other words, the CFG nodes in which $f$ and $g$ are called, which are $mono(p_f: lbl(e_f) = f(...))$ and $mono(p_g: lbl(e_g) = g(...))$, are not ancestor of each other.
+The soundness of our overall analysis depends on the correctness of safely-reachable property. This is because later in the utilization analysis, the analysis determines which value should be marked as utilized based on the Sources function, which depends on SafeReach function. The set #box($sigma = "SafeReach"(p, e)$) is safely reachable if either there is only at most one reference ($abs(sigma) < 2$) or all references in $sigma$ are construction calls that are exist exclusively from each other.
 
-We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that are not exclusively alive, i.e. one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus exclusively alive to each other.
+We provide the full proof of this property in @apx:SafeReachProof. In short, we prove that if there are two construction calls that do not exist exclusively, such that one call's node is an ancestor to the other, the ancestor call must be included in the occluded set. Since the result of SafeReach always excludes the occluded set if there are more than one reachable definitions, its member cannot be an ancestor to each other, and thus exist exclusively to each other.
 
 ] /* End of Safely Reachable Value */
 

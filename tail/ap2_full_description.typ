@@ -183,7 +183,8 @@ $
   &evalexit(p) &&= evalentry(p)
 $
 
-=== Helper functions in the call node case $evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n))))$
+=== Helper functions in the call node cases
+
 Apply effect
 $
   "ApplyEff"(ypo, u, ef) = cases(
