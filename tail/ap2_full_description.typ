@@ -183,7 +183,7 @@ $
   &evalexit(p) &&= evalentry(p)
 $
 
-=== Helper functions in the call node cases
+=== Helper functions in the call node case
 
 Apply effect
 $

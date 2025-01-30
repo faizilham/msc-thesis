@@ -3,13 +3,13 @@
 
 = Implementation in Kotlin
 
-In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([source code in https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of Novozhilov (2024) @DemiurgKotlinPlugin as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph are not exactly identical to the control flow graph implementation in the Kotlin compiler.
+In this chapter, we discuss our implementation of the utilization analysis in Kotlin. We implement#footnote([source code in https://github.com/faizilham/kotlin-retval-analysis/]) the analysis as a compiler plugin, using the work of Novozhilov (2024) @DemiurgKotlinPlugin as a base template for connecting the plugin to the compiler. While in theory implementing the analysis should be relatively straightforward, in practice our model of the control flow graph is not identical to the control flow graph implementation in the Kotlin compiler.
 
 // Overall architecture?
 
-== Annotating utilizable types, utilization status and effects
+== Annotating utilizable types, utilization status, and effects
 
-We use the annotation class feature for annotating utilization status and effects in function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
+We use the annotation class feature for annotating utilization status and effects in the function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of the context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
 
 #listing("Annotation for File class")[
 ```kt
@@ -77,7 +77,7 @@ fun<A, B> (@Util("ua") A).let1(
 
 == Lattice data structure
 
-While in Chapter 6 we extend the utilization lattice to include utilization variables $omega$, in practice the utilization variables are currently only useful for inferencing the parameters' initial utilization. In the inference case, each parameter is always assigned with a unique utilization variable. Rather than using a set object to represent the lattice, we model the utilization lattice as a enumeration of `Bot` ($bot$), `UT` ($UT$), `NU` ($NU$) and `Top` ($top$), as shown in @lst:UtilLatClass. Parameters are assigned with bottom value at start, and the implementation simply track the latest known utilization variable value for each function parameters. This is because it is much more efficient to represent the lattice value as a plain enumeration than a set object.
+While in Chapter 6 we extend the utilization lattice to include utilization variables $omega$, in practice the utilization variables are currently only useful for inferencing the parameters' initial utilization. In the inference case, each parameter is always assigned a unique utilization variable. Rather than using a set object to represent the lattice, we model the utilization lattice as an enumeration of `Bot` ($bot$), `UT` ($UT$), `NU` ($NU$), and `Top` ($top$), as shown in @lst:UtilLatClass. Parameters are assigned with a bottom value at the start node, and the implementation simply tracks the latest known utilization variable value for each function parameter. This is because it is much more efficient to represent the lattice value as a plain enumeration than a set object.
 
 
 #listing([Utilization lattice class and the $leqsq$ implementation])[
@@ -92,13 +92,13 @@ sealed class UtilLattice(private val value: Int): Lattice<UtilLattice> {
 }
 ```] <lst:UtilLatClass>
 
-Another common lattices we use in the analysis is the map lattice. We extend the built-in `Map<K,V>` data structure in Kotlin as `DefaultMapLat<K,V>` class, in which any key of type `K` not found in the map lattice is presumed to have a default lattice value, usually either a $bot$ or $top$. This is useful since we do not have to initialize the lattice at start especially in case of free variables. If we instead must initialize free variable mappings in the lattice, we have to traverse the CFG at least once to collect all the free variables _before_ the analysis can start. By defaulting the lattice value, we can minimize unnecessary CFG traversals.
+Another common lattice we use in the analysis is the map lattice. We extend the built-in `Map<K,V>` data structure in Kotlin as `DefaultMapLat<K,V>` class, in which any key of type `K` not found in the map lattice is presumed to have a default lattice value, usually either a $bot$ or $top$. This is useful since we do not have to initialize the lattice at the start node, especially in the case of free variables. If we instead must initialize free variable mappings in the lattice, we have to traverse the CFG at least once to collect all the free variables _before_ the analysis can start. By setting a default lattice value, we can minimize unnecessary CFG traversals.
 
 == Handling context object and invoke function
 
-A context object or a receiver is the object `x` in the calling syntax `x.f()`, where `f` is a class method or an extension function to `x`. In our model for analysis, calling `x.f()` is identical to calling `f(x)`. We chose to simplify this in the analysis since in principle a context object is similar to a parameter. However, this is not how it is implemented in the Kotlin compiler. In the case of calling `x.f()`, the function `f` has the type #box($X.() ->Y$), while in the other case the function has the type #box($(X) ->Y$). To reflect this, we separate the effect and utilization annotation for parameters and context object into different fields in our data structure.
+A context object or a receiver is the object `x` in the calling syntax `x.f()`, where `f` is a class method or an extension function to `x`. In our model for analysis, calling `x.f()` is identical to calling `f(x)`. We chose to simplify this in the analysis since in principle a context object is similar to a parameter. However, this is not how it is implemented in the Kotlin compiler. In the case of calling `x.f()`, the function `f` has the type #box($X.() ->Y$), while in the other case, the function has the type #box($(X) ->Y$). To reflect this, we separate the effect and utilization annotation for parameters and the context object into different fields in our data structure.
 
-A common case when context object matters is when a function is assigned to a variable, and then later called. Kotlin has a special primitive called `invoke` for calling a function variable. Consider the example in @lst:ExtensionInvoke.
+A common case when a context object matters is when a function is assigned to a variable, and then later called. Kotlin has a special primitive called `invoke` for calling a function variable. Consider the example in @lst:ExtensionInvoke.
 
 #listing("Calling extension function through invoke")[
 ```kt
@@ -109,4 +109,4 @@ val x : X = ...
 x.g(1)             // identical to g.invoke(x, 1) in CFG
 ```] <lst:ExtensionInvoke>
 
-In the example, we assigned the extension function `f` to variable `g`, and then call `x.g()`. When the compiler transforms the AST to a CFG, the call `x.g()` is translated to `g.invoke(x)`. This means that the context object `x` should be treated as a parameter, and thus the analysis change the signature data type of `g` by moving the effect and utilization annotation of the context object into the first parameter, and shifting the other parameter indexes by one.
+In the example, we assigned the extension function `f` to variable `g`, and then called `x.g()`. When the compiler transforms the AST to a CFG, the call `x.g()` is translated to `g.invoke(x)`. This means that the context object `x` should be treated as a parameter, and thus the analysis changes the signature data type of `g` by moving the effect and utilization annotation of the context object into the first parameter, and shifting the other parameter indexes by one.
