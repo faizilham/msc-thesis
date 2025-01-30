@@ -74,7 +74,7 @@ From these examples, only the assignment pattern of `task3` is quite commonly us
 ```] <lst:DeferredAlias>
 
 
-We mentioned earlier that the utilization model can be used to describe linear resource types such as a file handler. Most built-in methods of the file handler type require some prerequisites for the utilization status of the input parameter. Therefore, we shall also provide *utilization status annotation at the function signature* to indicate the required and resulting utilization statuses.
+We mentioned earlier that the utilization model can be used to describe linear resource types such as a file handler. Most built-in methods of the file handler type require some prerequisites for the utilization status of the input parameter. Therefore, we shall also provide *utilization status annotation at the function signature* to indicate the required and resulting utilization status.
 
 Since we focus on the Kotlin language, there are two constraints that shall be fulfilled by the analysis method. First, the analysis shall be *based on the intra-procedural data-flow analysis* since it is the main technique used in the Kotlin compiler framework. The second constraint is that we shall *use existing features of Kotlin instead of developing new syntax*, such as using Kotlin's annotation feature. This is because we want the analysis to be compatible with common Kotlin programs as much as possible.
 

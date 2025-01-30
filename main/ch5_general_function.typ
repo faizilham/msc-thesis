@@ -412,12 +412,12 @@ $
   PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 $
 
-This method of effect checking and inference can accommodate the most common cases in utilization analysis. However, it is only limited to non-parametric effect signatures since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
+This method of effect checking and inference can accommodate the most common cases in utilization analysis. However, it is only limited to non-parametric effect signatures since we only recorded concrete utilization status (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
 
 
 == Chapter summary
 
-We generalize the forward analysis of the simplified problem to be able to handle any functions, including higher-order functions. We first introduce effect annotations to function signatures, indicating how a function affects the utilization statuses of its parameters and free variables: changing the status to utilized, to not-utilized, to an unknown status, or having no effect. Higher-order functions are annotated with parametric effect, such that they may take the effect of the functions passed to them as input arguments.
+We generalize the forward analysis of the simplified problem to be able to handle any functions, including higher-order functions. We first introduce effect annotations to function signatures, indicating how a function affects the utilization status of its parameters and free variables: changing the status to utilized, to not-utilized, to an unknown status, or having no effect. Higher-order functions are annotated with parametric effect, such that they may take the effect of the functions passed to them as input arguments.
 
 We introduce a new phase of the analysis, the function alias analysis, that shall run before the reachable value analysis. The function alias analysis determines which functions are actually called and resolves their signatures since we now must handle any function. We modify the reachable value analysis to include parameters and free variables as value sources aside from the local construction calls. The most significant change is to the utilization analysis, in which a function call may create a new utilizable value, affect the utilization status of its parameters and free variables, or both. Since effect annotations are also parametric, the analysis must also instantiate and check the annotations based on the input arguments. When the analysis is finished, it can check a function's effect annotations for each parameter to make sure that it correctly reflects what happened in the function body. The analysis can also infer a concrete effect annotation for lambda functions.
 
