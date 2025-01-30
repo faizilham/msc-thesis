@@ -4,7 +4,7 @@
 
 = Generalizing the Analysis to All Functions
 
-While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
+While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similar to the `utilize` function. A function that returns a utilizable type is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
 #listing("Top level functions utilization examples")[```kt
 fun utilizeTwo(a: Utilizable, b: Utilizable) { // Utilize a and b
@@ -22,11 +22,11 @@ fun passThrough(a: Utilizable) : Utilizable {
 }
 ```] <lst:TopLevelUtilEx>
 
-The `passThrough` function behavior is quite unintuitive at the first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
+The `passThrough` function behavior is quite unintuitive at first glance since it only returns an existing value instead of a new one. There are two ways to handle this case. First, we can declare that the function does not use its argument and the return value is an alias to the argument. The second way is to declare that the function uses its argument and then return a new utilizable value. While the first way is the more accurate description of `passThrough` behavior, we choose the second description in this model since it bypasses the aliasing problem, and if we want to add a more accurate alias analysis in the future it can be easily modified by disabling the return-means-utilize behavior for argument values.
 
 
 
-Lambda functions behave in a similar way to top-level functions, but one main difference is that lambda functions may also affect the utilization of its free variables, that is the variables declared on the higher-level scope than the lambda function's body. @lst:LambdaUtilEx shows the example of lambda functions effect on utilization. In the `testLambda` function, the lambda function assigned to variable `lam` uses its first argument and the free variable `b`. Therefore, the values in `a` and `b` are utilized after the `lam(a)` call.
+Lambda functions behave in a similar way to top-level functions, but one main difference is that lambda functions may also affect the utilization of its free variables, that is the variables declared on the higher-level scope than the lambda function's body. @lst:LambdaUtilEx shows the example of lambda functions' effect on utilization. In the `testLambda` function, the lambda function assigned to variable `lam` uses its first argument and the free variable `b`. Therefore, the values in `a` and `b` are utilized after the `lam(a)` call.
 
 #listing("Lambda functions utilization examples")[```kt
 fun testLambda() {
@@ -48,20 +48,20 @@ fun invalidateErr() {
 }
 ```] <lst:LambdaUtilEx>
 
-A lambda function may also change the values of mutable free variables, as shown in the `invalidateErr` function in the given example. We decide to regard any mutation of free variable by a lambda function as a possible error, and thus the example is reported as an error when it should be alright. This is because tracking the reference changes and values escapes through the free variables complicates the analysis too much, while in practice free-variable mutating lambda functions are rarely used.
+A lambda function may also change the values of mutable free variables, as shown in the `invalidateErr` function in the given example. We decide to regard any mutation of free variable by a lambda function as a possible error, and thus the example is reported as an error when it should be correct. This is because tracking the reference changes and values escapes through the free variables complicates the analysis too much, while in practice free-variable mutating lambda functions are rarely used.
 
-From the given examples, we can conclude that a function can utilize of a parameter (or free variable) or does not affect them. In other words, given a parameter's utilization status $u$, a function may change it to $UT$ ("definitely utilized") as a side effect or keep it as $u$. The utilization status lattice, however, also consist of the values $NU$ ("definitely not utilized") and $top$ ("maybe utilized or not"). Changing the utilization to $top$ may happen if we do not have any information about the function, and thus the analysis need to over-approximate. While there are not many examples of functions that need to change the utilization back to $NU$, it is useful to model it for the sake of completion.
+From the given examples, we can conclude that a function can utilize its parameters (or free variables) or does not affect them. In other words, given a parameter's utilization status $u$, a function may change it to $UT$ ("definitely utilized") as a side effect or keep it as $u$. The utilization status lattice, however, also consists of the values $NU$ ("definitely not utilized") and $top$ ("maybe utilized or not"). Changing the utilization to $top$ may happen if we do not have any information about the function, and thus the analysis needs to over-approximate. While there are not many examples of functions that need to change the utilization back to $NU$, it is useful to model it for the sake of completion.
 
 
 == Utilization effects
 
-We define the set of utilization effects $Ef$ in @eq:UtilEffects, where, given $u$ the initial utilization status of a parameter or free variable, $EfU$ means it utilizes the value (changing $u$ to $UT$), $EfI$ means it invalidates the value's utilization (changing $u$ to $NU$), $EfN$ means it does not affect the value (keeping it to $u$), and $EfX$ means unknown effect (changing $u$ to $top$). Effects may also be parametric, with $epsilon$ an effect variable.
+We define the set of utilization effects $Ef$ in @eq:UtilEffects, where, given $u$ the initial utilization status of a parameter or free variable, $EfU$ means it utilizes the value (changing $u$ to $UT$), $EfI$ means it invalidates the value's utilization (changing $u$ to $NU$), $EfN$ means it does not affect the value (keeping it to $u$), and $EfX$ means unknown effect (changing $u$ to $top$). Effects may also be parametric, with $epsilon$ as an effect variable.
 
 $
   Ef := EfU | EfI | EfN | EfX | epsilon
 $ <eq:UtilEffects>
 
-We then extend the function type signature after its return type with effect annotations for each of its parameters and free variables in case of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
+We then extend the function type signature after its return type with effect annotations for each of its parameters and free variables in the case of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in the case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect on its arguments and free variables.
 
 $
   f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\
@@ -94,7 +94,7 @@ $
   "lam" : ("Utilizable") -> "Unit" andef {1 |-> EfU, b |-> EfU}
 $
 
-Notice how `newUtilizable` does not have an effect since it only creates a new value, while `utilizeTwo` and `passThrough` only have effects on its parameters. In addition to the parameter effects, the lambda function `lam` also has the free variable effects.
+Notice how `newUtilizable` does not have an effect since it only creates a new value, while `utilizeTwo` and `passThrough` only have effects on its parameters. In addition to the parameter effects, the lambda function `lam` also has free variable effects.
 
 === Parametric utilization effect
 
@@ -104,11 +104,11 @@ $
   "apply" : ((A) -> B andef { 1 |-> epsilon } union phiEf, A ) -> B andef { 2 |-> epsilon } union phiEf\
 $ <eq:ApplySignature>
 
-This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects. Currently, we only allow top-level functions' free variable annotation to be either parametric (as variable $phiEf$) or empty ($PhiEf = emptyset$) to prevent effect on global variables. This is because we limit the analysis to be a local, intra-procedural analysis.
+This example illustrates how the effect of `apply` is parametric to the effects of function `f`. The utilization of parameter `x`, which is the second parameter of `apply`, depends on the effect of `f` on its first parameter, that is $epsilon$. If function `f` has some effects on free variables annotated as $phiEf$, then `apply` also has the same effects. Currently, we only allow top-level functions' free variable annotation to be either parametric (as variable $phiEf$) or empty ($PhiEf = emptyset$) to prevent notating effects on global variables. This is because we limit the analysis to a local, intra-procedural analysis.
 
 == Function alias analysis
 
-Since in the generalized model any function call may create a new utilizable value or has some effects, we first need to determine which function is called and what is its effect signature before we can analyze the values utilizations. We can determine the function by running a function alias analysis, which is a reachable definition analysis modified for function type values.
+Since any function call may create a new utilizable value or has some effects, we first need to determine which function is called and what is its effect signature before we can analyze the values utilizations. We can determine the function by running a function alias analysis, which is a reachable definition analysis modified for function type values.
 
 #[ /* Start of Function Alias Analysis */
 #let evalbracket = evalbracket.with(sub:"FA")
@@ -139,9 +139,9 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:FuncAliasTransfers>
 
-The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Other notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
+The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Another notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
 
-We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply return the signature of the function. Otherwise, it returns the function type with unknown utilization effects since we cannot guarantee what are the effects. The signature of a top-level function definition is given by annotations, while a lambda function one is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
+We can then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply returns the function's signature. Otherwise, it returns the function type with unknown utilization effects since we cannot guarantee what are the effects. The signature of a top-level function definition is given by annotations, while a lambda function's signature is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
 $
   &"ResolveSign"(p, e) &&= cases(
@@ -153,7 +153,7 @@ $ <eq:ResolveSign>
 
 ] /* End of Function Alias Analysis */
 
-== Modifying the safely reachable values analysis
+== Modifying the safely-reachable values analysis
 
 #[ /* Start of Reachable Value Analysis Modified */
 #let evalbracket = evalbracket.with(sub:"RV")
@@ -164,7 +164,7 @@ $ <eq:ResolveSign>
 
 In the simplified model, we only care about the utilization of values created inside the function, since we assume functions other than `create` and `utilize` do not create new values or have any effects. Since now any functions may have effects on its arguments or free variables, we also need to track the utilization of those values.
 
-In addition to LocalVars and ExprLabel, we now also assume each functions to have the set of parameters Param and the set of free variables FV. We redefine the set of construction calls Cons as the set of function calls which return utilizable types. We also define the set of utilizable values from non-local sources, which are the function parameters and free variables. The set Src is the set of utilizable values sources, which are construction calls and non-local sources.
+In addition to LocalVars and ExprLabel, we now also assume each function to have the set of parameters Param and the set of free variables FV. We redefine the set of construction calls Cons as the set of function calls that return utilizable types. We also define the set of utilizable values from non-local sources, which are the function parameters and free variables. The set Src is the set of utilizable values sources, which are construction calls and non-local sources.
 $
   &"Ref" &&= "LocalVars" union "ExprLabel" union "NonLocal" \
   &"Cons" &&= { f | f in "ExprLabel" and "RetType"(lbl(f)) "is Utilizable" }\
@@ -173,7 +173,7 @@ $
   &"VarAt" &&= {(x, p) | x in "LocalVars", p in "Node"}
 $
 
-We can then define the lattices used in the analysis as @eq:RVLatticeModified. The main difference is that the reachable values lattice $R$ also includes NonLocal through the Src set, instead of just VarAt and Cons.
+We can then define the lattices used in the analysis as @eq:RVLatticeModified. The main difference is that the reachable values lattice $R$ also includes NonLocal through the Src set, instead of only VarAt and Cons.
 
 $
   &R &&= (powerset("VarAt" union "Src"), subset.eq)\
@@ -212,7 +212,7 @@ $
 
 $ <eq:RVPostExecTransferModified2>
 
-The definitions of SafeReach and Sources are not changed, but we include it here for convenience sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definitions. This means that references to parameters and free variables behave similarly to references of local variable, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
+The definitions of SafeReach and Sources have not changed, but we include them here for convenience's sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definition. This means that references to parameters and free variables behave similarly to references of local variables, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
 $
   &"SafeReach"(p, e) &&= cases(
     r_e & "if" abs(r_e) <= 1,
@@ -250,7 +250,7 @@ $
   &evalentry(p) &&= join.big_(q in "pred"(p)) evalexit(q) \
 $ <eq:UtilAnalysisTransferGen1>
 
-As for the post-execution transfer functions, there are only two main cases. The first case is returning a utilizable types, in which we mark the safely-reachable values of the returned expression as utilized.
+As for the post-execution transfer functions, there are only two main cases. The first case is returning a utilizable type, in which we mark the safely-reachable values of the returned expression as utilized.
 
 $
   &evalexit(mono("p: return" lbl(e))) &&= sp[c |-> {UT} | c in "Sources"(p, e) and "type"(lbl(e)) "is Utilizable"]\
@@ -269,7 +269,7 @@ $
   &wide v' &&= "Sources"(p, v) "given" v "a free variable of" f
 $ <eq:UtilAnalysisFuncCall>
 
-The transfer function is essentially a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, that is by setting $f$ to $NU$ if it is a construction call (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to the safely-reachable values of free variables. The effect-applying function in MarkArgs and MarkFV is defined in @eq:ApplyEff, which simply returns a new utilization status according to the effect. Before the applications of the three marking functions, however, the analysis first resolves safely-reachable values of each arguments and free variables, and also check and instantiate the signature of $f$ based on the arguments it receives.
+The transfer function is essentially a composition of three primary functions: (1) MarkCall for marking a potential creation of utilizable value, that is by setting $f$ to $NU$ if it is a construction call (2) MarkArgs for applying the utilization effects to the safely-reachable values of the arguments, and (3) MarkFV for applying the effects to the safely-reachable values of free variables. The effect-applying function in MarkArgs and MarkFV is defined in @eq:ApplyEff, which simply returns a new utilization status according to the effect. Before the applications of the three marking functions, however, the analysis first resolves safely-reachable values of each argument and free variable, and also checks and instantiates the signature of $f$ based on the arguments it receives.
 
 #[
 // Temporarily decrease block spacing here
@@ -284,11 +284,11 @@ $
 $ <eq:ApplyEff>
 ]
 
-This transfer function is much more complicated than the one in the simplified problem for two reasons. First, any functions can now create new utilizable values, change utilization of its parameters and free variables, or both. This is why the transfer function is a composition of the three marking functions. Second, we allow functions have parametric effects in order to be able to handle higher-order functions; hence, the function signature must be instantiated and checked based on the received arguments.
+This transfer function is much more complicated than the one in the simplified problem for two reasons. First, any function can now create new utilizable values, change the utilization of its parameters and free variables, or both. This is why the transfer function is a composition of the three marking functions. Second, we allow functions to have parametric effects in order to be able to handle higher-order functions; hence, the function signature must be instantiated and checked based on the received arguments.
 
 === Instantiating function signatures
 
-As we mentioned earlier, the analysis need to instantiate the signature with based on the resolved arguments before applying the effects. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments, and also checks the effect signature of the arguments if the signature have a concrete one instead.
+As we mentioned earlier, the analysis needs to instantiate the signature based on the resolved arguments before applying the effects. The Instantiate function instantiates any parametric effects in the signature with the concrete effect signatures of the arguments and also checks the effect signature of the arguments if the signature has a concrete one instead.
 
 For example, suppose that we have higher-order functions `apply(f,a)` and `applyU(f,a)` that pass the value $a$ to the function $f$. The signatures of these functions are shown in @eq:InstantiateExample1. The function `applyU` is similar to `apply` but with the difference that it requires the passed function to utilize its argument.
 #[
@@ -320,7 +320,7 @@ $
 
 As we can see in the example, the instantiations of `apply(f,a)` and `apply(g,a)` replace the parametric effects $epsilon$ and $phiEf$ with the effects of `f` and `g` accordingly. The instantiation of `applyU(f,a)` only replaces $phiEf$ since it is the only parametric effect in `applyU`. In contrast to the other calls, the instantiation of `applyU(g,a)` results in an error since the required effect signature #box($(A) -> B andef {1 |-> EfU} union phiEf$) is not fulfilled by `g`, which has the effect $EfN$ for its first parameter.
 
-We define  Instantiate : $("Signature", angles("Signature", ...)) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variable in $PiEf$ and $phiEf$ into environment $Gamma$, and then unify each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
+We define  Instantiate : $("Signature", angles("Signature", ...)) -> "Signature"$ as shown in @eq:InstantiateDef. It collects all parametric effect variables in $PiEf$ and $phiEf$ into environment $Gamma$, and then unifies each parameter type $t_i$ that is a function type with the argument signature $alpha_i$ using the unification function $unify$. The results of the unification are combined into $Gamma'$. Finally, it replaces all effect variables in the types and the effect sets based on the combined environment $Gamma'$.
 #[
 // #show math.equation.where(block: true): set block(spacing: 1em)
 
@@ -393,7 +393,7 @@ After a single pass of transfer functions evaluations, the analysis may report a
 
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
-The analysis can also produce warning for top-level function signature effects that do not match the actual utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
+The analysis can also produce warnings for top-level function signature effects that do not match the actual utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
 
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(evalexit(mono("exit"))(p_i)) }\
@@ -412,13 +412,13 @@ $
   PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 $
 
-This method of effect checking and inference can accommodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
+This method of effect checking and inference can accommodate the most common cases in utilization analysis. However, it is only limited to non-parametric effect signatures since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
 
 
 == Chapter summary
 
-We generalize the forward analysis of the simplified problem to be able to handle any functions, including higher-order functions. We first introduce effect annotations to function signatures, indicating how a function affect the utilization statuses of its parameters and free variables: changing the status to utilized, to not-utilized, to an unknown status, or having no effect. Higher-order functions are annotated with parametric effect, such that they may take the effect of the functions passed to them as input arguments.
+We generalize the forward analysis of the simplified problem to be able to handle any functions, including higher-order functions. We first introduce effect annotations to function signatures, indicating how a function affects the utilization statuses of its parameters and free variables: changing the status to utilized, to not-utilized, to an unknown status, or having no effect. Higher-order functions are annotated with parametric effect, such that they may take the effect of the functions passed to them as input arguments.
 
-We introduce a new phase of the analysis, the function alias analysis, that shall run before the reachable value analysis. The function alias analysis determines which functions are actually called and resolve its signatures since we now must handle any kind of functions. We modify the reachable value analysis to include parameters and free variables as value sources aside from the local construction calls. The most significant change is to the utilization analysis, in which a function call may creates a new utilizable value, affects the utilization status of its parameters or free variables, or both. Since effect annotations are also parametric, the analysis must also instantiate and check the annotations based on the input arguments. When the analysis finished, it can check a function's effect annotations for each parameters to make sure that it correctly reflects to what actually happened in the function body. The analysis can also infers a concrete effect annotation for lambda functions.
+We introduce a new phase of the analysis, the function alias analysis, that shall run before the reachable value analysis. The function alias analysis determines which functions are actually called and resolves their signatures since we now must handle any function. We modify the reachable value analysis to include parameters and free variables as value sources aside from the local construction calls. The most significant change is to the utilization analysis, in which a function call may create a new utilizable value, affect the utilization status of its parameters and free variables, or both. Since effect annotations are also parametric, the analysis must also instantiate and check the annotations based on the input arguments. When the analysis is finished, it can check a function's effect annotations for each parameter to make sure that it correctly reflects what happened in the function body. The analysis can also infer a concrete effect annotation for lambda functions.
 
-With the addition of the effect annotations and the generalization to all functions, we achieve our goals of handling any user-defined functions, handling higher-order functions, and the goal of checking and inferring functions' utilization effects. The last thing we have not yet handle is the collection and resource-like types, which requires utilization status annotations.
+With the addition of the effect annotations and the generalization to all functions, we achieve our goals of handling any user-defined functions, handling higher-order functions, and the goal of checking and inferring functions' utilization effects. The last thing we have not yet handled is the collection and resource-like types, which require utilization status annotations.
