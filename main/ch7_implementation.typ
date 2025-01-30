@@ -9,7 +9,7 @@ In this chapter, we discuss our implementation of the utilization analysis in Ko
 
 == Annotating utilizable types, utilization status, and effects
 
-We use the annotation class feature for annotating utilization status and effects in the function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in the case of the context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
+We use the annotation class feature for annotating utilization status and effects in the function signature. A type is declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which shall be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which shall be placed at the affected parameters or the function itself in the case of the context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
 
 #listing("Annotation for File class")[
 ```kt
@@ -41,7 +41,7 @@ class MyList<@UtilizeLike T> constructor() {
 }
 ```] <lst:CollectionTypeAnno>
 
-For more complex effects, we can annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc can be annotated as shown in @lst:LetAnno.
+For more complex effects, we annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc is annotated as shown in @lst:LetAnno.
 
 $
 "let" : A.((A) -> B) -> B \
@@ -92,7 +92,7 @@ sealed class UtilLattice(private val value: Int): Lattice<UtilLattice> {
 }
 ```] <lst:UtilLatClass>
 
-Another common lattice we use in the analysis is the map lattice. We extend the built-in `Map<K,V>` data structure in Kotlin as `DefaultMapLat<K,V>` class, in which any key of type `K` not found in the map lattice is presumed to have a default lattice value, usually either a $bot$ or $top$. This is useful since we do not have to initialize the lattice at the start node, especially in the case of free variables. If we instead must initialize free variable mappings in the lattice, we have to traverse the CFG at least once to collect all the free variables _before_ the analysis can start. By setting a default lattice value, we can minimize unnecessary CFG traversals.
+Another common lattice we use in the analysis is the map lattice. We extend the built-in `Map<K,V>` data structure in Kotlin as `DefaultMapLat<K,V>` class, in which any key of type `K` not found in the map lattice is presumed to have a default lattice value, usually either a $bot$ or $top$. This is useful since we do not have to initialize the lattice at the start node, especially in the case of free variables. If we instead must initialize free variable mappings in the lattice, we have to traverse the CFG at least once to collect all the free variables _before_ the analysis can start. By setting a default lattice value, we minimize unnecessary CFG traversals.
 
 == Handling context object and invoke function
 

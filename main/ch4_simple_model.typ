@@ -3,7 +3,7 @@
 
 = A Simple Utilization Analysis
 
-We start with a simplified version of the problem. In this version, the utilizable values can only be constructed by the function `create()` and utilized by the function `utilize(u)`. Other functions do not affect the values' utilization status, and we purposefully ignore any utilization through higher-order functions and collection types.
+We start with a simplified version of the problem. In this version, the utilizable values may only be constructed by the function `create()` and utilized by the function `utilize(u)`. Other functions do not affect the values' utilization status, and we purposefully ignore any utilization through higher-order functions and collection types.
 
 The goal of the utilization analysis is to find which utilizable values are guaranteed to be utilized and which are not. A value is guaranteed to be utilized if all program execution paths starting from its `create` call always reach a `utilize` call. Any `create` calls that may have a path not reaching a `utilize` call should be reported as an error. Using this simplified model, we want to focus first on ensuring the soundness of the analysis in regard to the reference alias problem.
 
@@ -29,7 +29,7 @@ fun simple() {
 ```] <lst:SimpleModelExample>
 
 @lst:SimpleModelExample shows an example of utilization tracking in this simplified model, especially in regard to the reference alias problem. Each `create` call is marked with "OK" or "Error" as the expected result of the analysis. Observe that:
-+ The value constructed by the `create` call $C_1$ can always reach a `utilize` call via variable `a` or variable `a1`.
++ The value constructed by the `create` call $C_1$ always reach a `utilize` call via variable `a` or variable `a1`.
 + Both values from calls $C_2$ and $C_3$ are utilized through the variable `b`.
 + The call $C_4$ is the first error example. In this case, the value is not utilized if the conditional expression `cond3` is true and `cond4` is false.
 + In contrast to $C_4$, the value $C_5$ is always utilized through variable `d1`, since if `cond3` is false the call $C_5$ never happened and no value is created.
@@ -39,7 +39,7 @@ There are two ways to approach the problem. The first one is to trace paths back
 
 == Backward analysis
 
-The first approach to utilization tracking is through a backward analysis. The main idea of this approach is to propagate back the utilization status starting from each `utilize` call. For example, suppose there is a path reaching a call `utilize(x)`. This means, any values referenced by variable `x` are guaranteed to be utilized in the current path. We can mark the variable `x` as utilized, and go back to the previous nodes in the path. When the analysis reaches a past assignment `x := create()`, we can mark the `create` call as utilized. Similarly, if the path never reaches a call `utilize(x)`, the utilization status of `x` is never changed, and all past assignments will also be marked as not utilized. One main advantage of tracing backward is that we do not need to track the possible values or alias of the variables, since the future utilization status is automatically propagated in assignment nodes.
+The first approach to utilization tracking is through a backward analysis. The main idea of this approach is to propagate back the utilization status starting from each `utilize` call. For example, suppose there is a path reaching a call `utilize(x)`. This means, any values referenced by variable `x` are guaranteed to be utilized in the current path. We mark the variable `x` as utilized, and go back to the previous nodes in the path. When the analysis reaches a past assignment `x := create()`, we mark the `create` call as utilized. Similarly, if the path never reaches a call `utilize(x)`, the utilization status of `x` is never changed, and all past assignments will also be marked as not utilized. One main advantage of tracing backward is that we do not need to track the possible values or alias of the variables, since the future utilization status is automatically propagated in assignment nodes.
 
 #[
 #let evalbracket = evalbracket.with(sub:"UA")
@@ -115,7 +115,7 @@ The forward utilization analysis is divided into two parts, which are the safely
 
 === Safely-reachable values
 
-The reachable values of a variable or an expression are any values that might be referenced by the variable or an expression. This is quite similar to the reaching definition concept in many classical data-flow analyses. If we mark those reachable values as utilized, for example when there is a utilization call `utilize(x)` to a variable $x$, we cannot be sure if it is correct. This is because during runtime, $x$ can only refer to one of the reachable values, and if the other non-referred reachable values also exist, those values are not actually utilized by `utilize(x)`. However, if we can guarantee that only one of them can exist at the same time (and thus it is the value referenced by $x$), we can safely mark them as utilized. We called this the _safely-reachable_ values.
+The reachable values of a variable or an expression are any values that might be referenced by the variable or an expression. This is quite similar to the reaching definition concept in many classical data-flow analyses. If we mark those reachable values as utilized, for example when there is a utilization call `utilize(x)` to a variable $x$, we cannot be sure if it is correct. This is because during runtime, $x$ may only refer to one of the reachable values, and if the other non-referred reachable values also exist, those values are not actually utilized by `utilize(x)`. However, if the analysis infers that only one of them may exist at the same time (and thus it is the value referenced by $x$), it can safely mark them as utilized. We called this the _safely-reachable_ values.
 
 The set of safely reachable values is a subset of a variable's or an expression's reachable values, in which at most one of the values exists at the same time. In other words, each value in the safely-reachable set _exists exclusively_ from each other, that is either it is the referred value at runtime or it is never created in the first place. Consider the following code example.
 
@@ -141,17 +141,17 @@ a = if(...) b else c                                   // a -> {}
 ```] <lst:SafelyReachableEx>
 
 \
-From the examples in @lst:SafelyReachableEx, we can observe that:
+From the examples in @lst:SafelyReachableEx, we observe that:
 + Right after the execution of line 1, the safely-reachable values of variable $a$ is ${C_1, C_2}$, since both $C_1$ and $C_2$ only exist exclusively from each other
 + Right after line 4, the safely-reachable values of $a$ is ${C_3}$, since it is the last assigned value.
 + After the end of the branch statement at line 7, only $C_3$ and $C_4$ are safely reachable from $a$.
 + While it is still possible that $a$ might refer to $C_1$ or $C_2$, which happens when the conditions at line 3 and 5 fail, it is not safely reachable since one of ${C_1, C_2}$ is still created even when $a$ no longer refers to it.
 + In contrast, it is safe to assume that $a$ may refer to ${C_3, C_4}$, since both exist exclusively from each other and both are not created if $a$ refers to either $C_1$ or $C_2$.
-+ At line 11 of the code example, variable $a$ can safely reach ${C_5, C_6}$ since both are also safely-reachable from $b$.
++ At line 11 of the code example, variable $a$ may safely reach ${C_5, C_6}$ since both are also safely-reachable from $b$.
 + At line 14, however, while $a$ may refer to any of the values $C_1$ to $C_7$, only $C_7$ is safely-reachable. This is because $C_7$ is never created if $a$ refers to any values other than $C_7$, while the reverse is not necessarily true.
 + At line 17, the safely-reachable values set for $a$ is an empty set, since the values referred by variables $b$ and $c$ do not exist exclusively with each other.
 
-Based on these observations, we find a pattern: a variable-to-variable assignment is only safely reachable if it is the only reachable assignment. In contrast, there can be more than one direct value references that are safely reachable. From a graph-centric perspective, we can also express that given two creation calls $c_a$ and $c_b$, the values returned by $c_a$ and $c_b$ exist exclusively of each other if there is no program path in which both $c_a$ and $c_b$ are called. In other words, the CFG node of $c_a$ call is not an ancestor to the node of $c_b$ call and vice versa.
+Based on these observations, we find a pattern: a variable-to-variable assignment is only safely reachable if it is the only reachable assignment. In contrast, there can be more than one direct value references that are safely reachable. From a graph-centric perspective, exclusivity may be expressed as follows: given two creation calls $c_a$ and $c_b$, the values returned by $c_a$ and $c_b$ exist exclusively of each other if there is no program path in which both $c_a$ and $c_b$ are called. In other words, the CFG node of $c_a$ call is not an ancestor to the node of $c_b$ call and vice versa.
 
 
 #[ /* Start of Safely Reachable Value */
@@ -163,7 +163,7 @@ Based on these observations, we find a pattern: a variable-to-variable assignmen
 #let opx = $o_p^circle.small.filled$
 #let rpx = $r_p^circle.small.filled$
 
-To define the safely-reachable analysis, we first define three sets Ref, Cons, and VarAt as shown in @eq:ForwardSafeReachSets. The sets Ref and Cons have the same definitions as in the backward analysis. The VarAt set is a set of pairs of a local variable and a node. The pair ($x$, $p$) can be interpreted as "the values referred by local variable $x$ when the program execution reaches node $p$".
+To define the safely-reachable analysis, we first define three sets Ref, Cons, and VarAt as shown in @eq:ForwardSafeReachSets. The sets Ref and Cons have the same definitions as in the backward analysis. The VarAt set is a set of pairs of a local variable and a node. The pair ($x$, $p$) is interpreted as "the values referred by local variable $x$ when the program execution reaches node $p$".
 
 $
   &"Ref" &&= "LocalVars" union "ExprLabel"\
@@ -198,7 +198,7 @@ $ <eq:RVTransferFunc>
 
 In the construction call case, the call expression is simply mapped to the singleton set of the construction function. In the variable access expression case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to the current variable reference, denoted by the variable-node pair $(x, p)$. This is quite important since we want to distinguish when an assignment from variable to variable happened. In the case of variable declaration, the variable $x$ is mapped to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case, we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
 
-When the analysis reaches a fix-point, we can define the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
+When the analysis reaches a fix-point, the analysis produces two functions: the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
 #[
 #show math.equation.where(block: true): set block(spacing: 1em)
 $
@@ -269,13 +269,13 @@ $ <eq:ForwardUtil>
 
 There are two main cases of note here. The first is the `create` call case, in which the construction label $f$ is marked as not utilization. The other case is the `utilize` call, in which we resolve the arguments into safely reachable construction call labels and mark them as utilized.
 
-After a single pass of transfer functions evaluations, the analysis can report the warning based on the utilization status at exit nodes.
+After a single pass of transfer functions evaluations, the analysis reports the warning based on the utilization status at exit nodes.
 
 $
 "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not UT }
 $
 
-An example of the analysis result can be seen in @lst:ForwardUtilExample. We also show in the example the values of $"Sources"(p, x)$ when $x$ is updated. Similar to the backward analysis, the forward analysis also reports an error on call $C_1$ and not $C_2$. Notice that we only update the program state during function calls.
+An example of the analysis result is shown in @lst:ForwardUtilExample. We also show in the example the values of $"Sources"(p, x)$ when $x$ is updated. Similar to the backward analysis, the forward analysis also reports an error on call $C_1$ and not $C_2$. Notice that we only update the program state during function calls.
 // However, the utilization state updates only happened on function calls, since the variable related cases are only relevant during safely-reachable values analysis.
 
 #listing("Example of forward analysis states")[
@@ -298,7 +298,7 @@ fun test() {                   // s1 = {C1: ⊥, C2: ⊥}
 
 == Chapter summary
 
-We define a simplified version of the utilization analysis problem by limiting it to only `create` and `utilize` calls. The main goal of formalizing utilization analysis in this simplified version is solving the reference alias problem. We first start with the backward-moving analysis, in which the analysis can simply flow back the utilization status starting from any `utilize` call to a `create` call. However, this technique is incompatible with our other goal: handling functions that may require a certain utilization status.
+We define a simplified version of the utilization analysis problem by limiting it to only `create` and `utilize` calls. The main goal of formalizing utilization analysis in this simplified version is solving the reference alias problem. We first start with the backward-moving analysis, in which the analysis flows back the utilization status starting from any `utilize` call to a `create` call. However, this technique is incompatible with our other goal: handling functions that may require a certain utilization status.
 
 We then devise a forward-moving analysis that is more compatible with our other goals. The analysis is split into two parts, the safely-reachable value analysis and the utilization analysis. We prove that our safely-reachable value analysis infers sound approximations of safely-reachable values, which contain values that exist exclusively from each other. The utilization analysis then becomes simpler. Using the result of the previous analysis, it resolves variables' and expressions' safely reachable values and marks them as utilized whenever `utilize` calls occur.
 

@@ -38,7 +38,7 @@ $
 $ <eq:UtilStatusJudgment>
 
 \
-For example, we can annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
+For example, we annotate the collection type methods as follows, given $C[a]$ the collection type of a utilizable type $a$.
 
 $
   "utilizeAll" :: (C[a]) -> "Unit" andef {1 |-> EfU}\
@@ -52,7 +52,7 @@ The function `utilizeAll(c)` does not have any utilization status requirement, a
 
 The `map(c,f)` function is quite more complicated. It requires the collection `c` to have the same utilization status requirement to the first argument of `f`, and then applies the effect of `f` to the collection. The `filter` function is quite similar to `map`, but it requires the collection to be already utilized since we may lose the reference to the filtered values.
 
-Other than the collection type, we can also employ both utilization annotation and effect in function signature to model resource types that are similar to linear types, such as the file handler type. For example, the primitives of a File type can be annotated as follows.
+Other than the collection type, we also employ both utilization annotation and effect in function signature to model resource types that are similar to linear types, such as the file handler type. For example, the primitives of a File type are annotated as follows.
 $
   "open"(s) : ("String") -> ann(NU)"File"\
   "read"(f) : (ann(NU)"File") -> "String"\
@@ -60,7 +60,7 @@ $
   "close"(s) : (ann(NU)"File") -> "Unit" andef {1 |-> EfU}\
 $ <eq:FileHandlerMethods>
 
-We can model the file handler status of open or closed by assigning not utilized ($NU$) as unclosed and utilized ($UT$) as closed. The file handler type can only be constructed with  the `open` function, which always returns an unclosed handler. The `read` and `write` functions both require the file handler to be unclosed and have no effect on the file handler's status. The `close` function also requires the file handler to be unclosed, but then utilize, i.e. closing, the handler as a side effect. This way the analysis can guarantee that an opened file handler is always closed exactly once, and there are no reads or writes to an already closed file handler.
+We model the file handler status of open or closed by assigning not utilized ($NU$) as unclosed and utilized ($UT$) as closed. The file handler type can only be constructed with  the `open` function, which always returns an unclosed handler. The `read` and `write` functions both require the file handler to be unclosed and have no effect on the file handler's status. The `close` function also requires the file handler to be unclosed, but then utilize, i.e. closing, the handler as a side effect. This way the analysis guarantees that an opened file handler is always closed exactly once, and there are no reads or writes to an already closed file handler.
 ]
 
 #let unify = math.cal("U")
@@ -110,7 +110,7 @@ $ <eq:UtilAnnoTransferReturn>
 
 We choose to keep this behavior since we do not have proper alias tracking. For example, the identity function is annotated as $(ann(omega) x) -> ann(omega) x andef {1 |-> UT}$, implying that the function utilizes the input and creates a new value with the same previous utilization, even if it is not actually the case.
 
-The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to require the utilization status of each argument and also return the unification environment $Gamma$. Next, we update all utilization variable $omega$ occurring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization status assigned to $omega$.
+The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to require the utilization status of each argument and also return the unification environment $Gamma$. Next, we update all utilization variable $omega$ occurring in $yp$ and $Gamma$ to its replacement value; this is used later by the analysis to infer the required utilization status assigned to $omega$.
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
   &wide "MarkCall(s)" &&= sp[f |-> u_ret | f in "Cons"]\
@@ -146,7 +146,7 @@ $
 $
 ]
 
-We also update the unification function $unify$ so that it can handle unification between utilization status and variables. The unification between a required utilization status $u$ and a concrete utilization status $u'$ is defined by the relation $u' leqsq u$. Notice that the unification is in the contraposition order when unifying the parameters of a function type.
+We also update the unification function $unify$ so that it handles unification between utilization status and variables. The unification between a required utilization status $u$ and a concrete utilization status $u'$ is defined by the relation $u' leqsq u$. Notice that the unification is in the contraposition order when unifying the parameters of a function type.
 
 $
   unify(Gamma, omega, u) = Gamma[omega |-> Gamma(omega) union {u}]\
@@ -176,7 +176,7 @@ $
  "Warnings" = {f | f in "Cons" and s_"fin" (f) leqsq.not { UT } }
 $
 
-For functions with utilization-annotated return type, the analysis may also check whether the returned values comply with the annotation. From the return statement nodes, we can extract the map ReturnUtil, which is the map of returned values to its utilization just before the return statement. The actual utilization of the return value $u_ret$ is simply the joined utilization status in ReturnUtil. The analysis can then produce a warning if $u_ret leqsq.not utv_ret$, given $utv_ret$ return utilization annotation.
+For functions with utilization-annotated return type, the analysis may also check whether the returned values comply with the annotation. From the return statement nodes, the analysis computes the map ReturnUtil, which is the map of returned values to its utilization just before the return statement. The actual utilization of the return value $u_ret$ is simply the joined utilization status in ReturnUtil. The analysis then produces a warning if $u_ret leqsq.not utv_ret$, given $utv_ret$ return utilization annotation.
 
 $
   "ReturnUtil" = union.big_(p in "Node") { c |-> sp(c) | c in "Sources"(p, e), p "is a" mono("return" lbl(e)) "node"}\
@@ -206,8 +206,8 @@ $
 
 == Chapter summary
 
-We extend the function signatures with utilization status annotation. A status annotation can be added to a parameter type, indicating the required utilization status for the corresponding argument, or to the return type to indicate the resulting utilization status. Status annotations can also be parametric; this is usually the case for higher-order functions.
+We extend the function signatures with utilization status annotation. A status annotation is added to a parameter type, indicating the required utilization status for the corresponding argument, or to the return type to indicate the resulting utilization status. Status annotations may also be parametric; this is usually the case for higher-order functions.
 
 To accommodate the status annotations, we only need to change the utilization analysis, since the function alias and safely-reachable values analysis are not directly related to the utilization status requirements. The most significant change is the expansion of the utilization lattice ${bot, NU, UT, top}$ with the utilization variables set, which contains all parametric status annotations in the analyzed function. Because of this expansion, we also need to record what is the instantiated values of the utilization variables, which is added to the program state lattice as the known utilization variable assignment lattice $Y$. The resulting unification environments in the Instantiate function are now recorded in the lattice $Y$ for every function call. This lattice $Y$ is useful for inferring the utilization requirements for lambda functions. Apart from recording the unification environments, the Instantiate function now also checks and instantiates the function signatures according to the arguments' utilization status.
 
-By using the combination of utilization status and effect annotations, we can model the utilization of collection types and resource-like types like a file handler. We now only need to implement a prototype of the analysis in Kotlin.
+By using the combination of utilization status and effect annotations, we model the utilization of collection types and resource-like types like a file handler. We now only need to implement a prototype of the analysis in Kotlin.

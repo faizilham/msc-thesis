@@ -19,7 +19,7 @@ A lattice $(S, leqsq)$ is the partial order of set $S$ defined by a binary relat
 
 The least upper bound of a set $X subset.eq S$, usually denoted by $join.big X$, is an element $y in S$ such that every $x in X$ is $x leqsq y$. On the other hand, the greatest lower bound of a set $X subset.eq S$, denoted by $meet.big X$, is an element $y in S$ such that every $x in X$ is $y leqsq x$. The binary operations $x join y$ (join) and $x meet y$ (meet) are also used for denoting $join.big {x, y}$ and $meet.big {x, y}$ respectively #citep(<MollersSPA>, [39]). In a complete lattice, the least upper bound element and the greatest lower bound element to $S$ itself are usually notated as $top$ (top) and $bot$ (bottom) elements respectively.
 
-In a data-flow analysis, lattices are used to represent abstract states in a program. For example, suppose that we want to analyze whether a floating point number is a real number ($R$), an infinity ($infinity$), a "not a number" value (NaN), or an unknown value. We can represent the sign information with the set #box($F = {bot, R, infinity, "NaN", top}$) and the lattice $(F, leqsq)$, with the binary relation $leqsq$ defined as $bot leqsq x$ and $x leqsq top$ for all $x in F$. We can also illustrate the lattice as a graph shown in @fig:FloatLattice.
+In a data-flow analysis, lattices are used to represent abstract states in a program. For example, suppose that we want to analyze whether a floating point number is a real number ($R$), an infinity ($infinity$), a "not a number" value (NaN), or an unknown value. This information is represented by the set #box($F = {bot, R, infinity, "NaN", top}$) and the lattice $(F, leqsq)$, with the binary relation $leqsq$ defined as $bot leqsq x$ and $x leqsq top$ for all $x in F$. The lattice forms an ordering graph shown in @fig:FloatLattice.
 
 #figure(caption: "Floating point number lattice")[
 #diagram(
@@ -46,7 +46,7 @@ The transfer or constraint functions in a data-flow analysis are equations (or i
 
 The way the equations are defined reflects the direction of the analysis, which is either forward or backward. A forward analysis is an analysis that computes information about past behavior, while a backward one computes future behavior #citep(<MollersSPA>, 72). In forward analysis, the entry equations $evalentry(p)$ are usually defined as a combination of the predecessors' exit equation $evalexit(q)$ for each $q$ a predecessor of $p$, while the exit equations $evalexit(p)$ are defined by the nodes' entry equation $evalentry(p)$. The reverse is true for backward analysis, with the exit equations defined by the successors' entry equation.
 
-When the information flows from the predecessor nodes (or successor nodes in the case of backward analysis), the lattice can be combined using either the least upper bound operation $join.big$ or the greatest lower bound operation $meet.big$. These ways of combining the lattice respectively reflect whether the analysis is a "may" or a "must" analysis #citep(<MollersSPA>, 73). A may analysis computes information that may be true, in other words, an over-approximation of the real state. A must analysis, meanwhile, computes information that must be true, that is the under-approximation.
+When the information flows from the predecessor nodes (or successor nodes in the case of backward analysis), the lattices are combined using either the least upper bound operation $join.big$ or the greatest lower bound operation $meet.big$. These ways of combining the lattice respectively reflect whether the analysis is a "may" or a "must" analysis #citep(<MollersSPA>, 73). A may analysis computes information that may be true, in other words, an over-approximation of the real state. A must analysis, meanwhile, computes information that must be true, that is the under-approximation.
 
 For the equations to converge, the transfer functions should be monotonic. A monotonic function $f : S_1 -> S_2$, given lattices $S_1$ and $S_2$, is a function that preserves the order of the input, that is for all $x, y: S_1$ if $x leqsq y$, it is also the case that $f(x) leqsq f(y)$  #citep(<MollersSPA>, 44).
 
@@ -84,7 +84,7 @@ The reaching definition analysis computes information of past assignments that m
 == Effect system
 An effect is abstract information about what happens when a part of a program is executed #citep(<NielsonPPA>, 17), such as whether an exception might be raised or which system calls are called by the program. To analyze effects, the type system of a programming language is extended with an effect system, in which annotations are typically added to the function type representing information related to its internal computation. This is quite different from an annotated type system since the effect annotation is inherent to the function itself, and not the input or the output of the function #citep(<NielsonPPA>, 323).
 
-We can extend the function type $(t_1, .., t_n) -> t_ret$ with the effect annotation $phi$ as #box($(t_1, .., t_n) ->^phi t_ret$), or sometimes written as $(t_1, .., t_n) -> t_ret andef phi$. The definition of the effect annotation depends on what kind of effects we want to analyze, but it usually is a set. For example, in exception analysis, the effect annotation $phi$ is defined as a set of exceptions, while in side-effect analysis the effect annotation can be a set of system calls such as console operations, file handling operations, memory allocations, etc.
+In effect systems, the function type $(t_1, .., t_n) -> t_ret$ is extended with the effect annotation $phi$ as #box($(t_1, .., t_n) ->^phi t_ret$), or sometimes written as $(t_1, .., t_n) -> t_ret andef phi$. The definition of the effect annotation depends on what kind of effects we want to analyze, but it usually is a set. For example, in exception analysis, the effect annotation $phi$ is defined as a set of exceptions, while in side-effect analysis the effect annotation is a set of system calls such as console operations, file handling operations, memory allocations, etc.
 
 Since the effect system is an extension of a type system, we may also include polymorphic effect and sub-effecting rules in the typing judgment. @eq:SubeffectingRule shows a typical sub-effecting rule added to the typing judgment. Notice that the sub-effecting is covariant to the function subtyping.
 
@@ -102,7 +102,7 @@ Kotlin is a statistically typed, general-purpose, object-oriented programming la
 Kotlin's type system has various features and properties #citep(<KotlinSpec2020>, 44). A main feature of the type system is null safety, which is achieved by splitting the types into two different lattice universes, nullable and non-nullable. The type system also has a
 unified top (`kotlin.Any`) and bottom (`kotlin.Nothing`) types in the lattices, and a proper upper and lower bound operation using the intersection and union types. Both intersection and union types are non-denotable, meaning they can not be used directly in the code by users and only exist when performing analyses and compiling the code.
 
-Another notable feature of the Kotlin type system is the flow-based type inference, meaning the type of an expression can be inferred based on where it appears in the control flow. For example, when a variable x of type `kotlin.Any` is checked as an integer using a construct such as `if (x is Int)`, the compiler can be sure that x can be statically cast as an integer in the true branch. Otherwise, the control flow would never reach that branch in the first place. This flow-based type inference is performed on control flow graphs.
+Another notable feature of the Kotlin type system is the flow-based type inference, meaning the type of an expression is inferred based on where it appears in the control flow. For example, when a variable x of type `kotlin.Any` is checked as an integer using a construct such as `if (x is Int)`, the compiler guarantees that it is safe to statically cast the variable x as an integer in the true branch. Otherwise, the control flow would never reach that branch in the first place. This flow-based type inference is performed on control flow graphs.
 
 === Control flow graph in Kotlin
 
@@ -132,7 +132,7 @@ The following are the types of CFG nodes based on what AST constructs they repre
 + Function start node #cfg[start] and exit node #cfg[exit]. These nodes appear only once at the start and the end of a function body.
 + Literal constant #cfg("$e = <Lit>"), representing constant values such as number or null value.
 + Identifier access #cfg("$e = x"), representing accesses to variable or other named references.
-+ Variable declaration #cfg("var x (:= $e)") or #cfg("val x (:= $e)"). These nodes are variable declaration nodes with an optional initializer expression. In Kotlin a variable can be declared as mutable with `var` or immutable with `val`. For the ease of formalization, we assume a variable is always mutable. This is safe to do  because if an analysis can handle mutable variables, it is also able to handle immutable variables. \ A variable can only be declared once and must be declared before any assignment. This means that for a variable `x`, there is only one variable declaration node of `x` per program path and there are no assignment nodes to `x` appearing before the declaration.
++ Variable declaration #cfg("var x (:= $e)") or #cfg("val x (:= $e)"). These nodes are variable declaration nodes with an optional initializer expression. In Kotlin a variable is declared as mutable with `var` or immutable with `val`. For the ease of formalization, we assume a variable is always mutable. This is safe to do because if an analysis can handle mutable variables, it is also able to handle immutable variables. \ A variable may only be declared once and must be declared before any assignment. This means that for a variable `x`, there is only one variable declaration node of `x` per program path and there are no assignment nodes to `x` appearing before the declaration.
 + Variable assignment #cfg("x := $e"), representing an assignment of the value of expression `e` to a variable `x`. As we mentioned earlier, a variable assignment node must be preceded, directly or indirectly, by a variable declaration node of the same variable.
 + When begin #cfg("when_begin($cond)") and end #cfg("when_end"), representing branching statements such as if-else and loops. The `when_begin` node always has two successor nodes, representing the paths if the condition is true or false. In the case of a loop, the `when_end` node's next edge points back to the beginning of the conditional expression's node.
 + Function call #cfg([\$e = \$f(\$arg#sub("1"), ..., \$arg#sub("n"))]), representing a call to the function `f`. Notice that `f` is an expression label instead of direct a function identifier. In the case of a member or an extension function call `x.f()`, we assume that it is transformed to `f(x)` for ease of formalization.
@@ -195,11 +195,11 @@ The following are the types of CFG nodes based on what AST constructs they repre
     )] <fig:CFGTransformExample>
 ]
 
-For our analysis purposes, we can assume that the CFG of the program already passes identifier resolving and type-checking steps. Therefore it is safe to assume that there will be no out-of-scope variable accesses or incorrect type assignments when analyzing the CFG.
+For our analysis purposes, we assume that the CFG of the program already passes identifier resolving and type-checking steps. Therefore it is safe to assume that there will be no out-of-scope variable accesses or incorrect type assignments when analyzing the CFG.
 
 === Annotation
 
-Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declarations, function declarations, and function parameters #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which can be source-only, retained in compiled binary, or accessible during runtime. Annotation can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
+Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declarations, function declarations, and function parameters #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which are source-only, retained in compiled binary, or accessible during runtime. Annotations can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
 
 #listing("Annotation usage in Kotlin")[
 ```kt
@@ -216,7 +216,7 @@ annotation class Ann(val message: String = "")
 }
 ```] <lst:KotlinAnnotation>
 
-Annotations can be used as a simple way to extend Kotlin without changing too much of the syntax. For example, if we want to add an effect system to the function type, we can use annotations in the function signature to represent the effects.
+Annotations are commonly used for extending Kotlin without changing its syntax. For example, if we want to add an effect system to the function type, we could use annotations in the function signature to represent the effects.
 
 == Common notations and definitions
 
@@ -235,7 +235,7 @@ $
 
 A map lattice $"MapLat"(X -> Y)$ is a lattice $(X -> Y, attach(leqsq, br: Y))$, which is the mapping from set $X$ to lattice $(Y, attach(leqsq, br: Y))$, and its ordering ($leqsq$) is equivalent to the ordering of lattice $Y$ ($attach(leqsq, br: Y)$). This means that given the map lattices $m_1, m_2 : X -> Y$, the property $m_1 leqsq m_2$ holds if and only if $y_1 attach(leqsq, br: Y) y_2$ for all $a in X$, $(a |-> y_1) in m_1$ and $(a |-> y_2) in m_2$.
 
-A powerset lattice $(powerset(X), subset.eq)$ is a lattice of the powerset of $X$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $X$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ can be illustrated as @fig:PowsetLattice.
+A powerset lattice $(powerset(X), subset.eq)$ is a lattice of the powerset of $X$, with the partial order relation $leqsq$ defined as the  subset or equal relation ($subset.eq$). The top element ($top$) for a powerset lattice is the set $X$, while the bottom element ($bot$) is the empty set. For example, the powerset lattice $(powerset({a, b, c}), subset.eq)$ is illustrated as @fig:PowsetLattice.
 
 #figure(caption: "Example of a powerset lattice")[
 #diagram(
