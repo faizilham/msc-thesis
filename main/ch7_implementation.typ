@@ -9,7 +9,7 @@ In this chapter, we discuss our implementation of the utilization analysis in Ko
 
 == Annotating utilizable types, utilization status, and effects
 
-We use the annotation class feature for annotating utilization status and effects in the function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in case of the context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
+We use the annotation class feature for annotating utilization status and effects in the function signature. A type can be declared as utilizable by annotating it with a `@MustUtilize` annotation. Utilization status is annotated with `@Util(u)` annotation, which can be placed at parameters, return type, or the function itself to annotate the utilization of the function's context object. Utilization effects are annotated with `@Eff(e)`, which can also be placed at the affected parameters or the function itself in the case of the context object's effect. @lst:AnnoFileType shows the example of annotation for File type and its methods.
 
 #listing("Annotation for File class")[
 ```kt
@@ -41,7 +41,7 @@ class MyList<@UtilizeLike T> constructor() {
 }
 ```] <lst:CollectionTypeAnno>
 
-In case of more complex effects, we can annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc can be annotated as shown in @lst:LetAnno.
+For more complex effects, we can annotate the function and its higher-order function type parameters with the `@Effects([...])` annotation for listing the effects, and `UE(target, eff)` for the effect to each target, which are parameters (the parameter's index starting from 0), context objects (-1) and parametric free variable (-2). For example, the `let` scope function in @eq:LetScopeFunc can be annotated as shown in @lst:LetAnno.
 
 $
 "let" : A.((A) -> B) -> B \
