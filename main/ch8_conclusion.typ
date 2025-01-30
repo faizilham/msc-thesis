@@ -9,7 +9,7 @@ In summary, we present a data-flow analysis for tracking the utilization of valu
 + checks for incorrect value assignments in regard to the required utilization status and effects,
 + infers the utilization effect and status annotations for lambda functions.
 
-== Limitations and future works
+== Limitations and future work
 
 There are some limitations to our analysis technique that can be improved in the future. First, our analysis *cannot infer parametric effects in lambda function signatures*. While it is possible to extend the analysis to allow this, we chose not to do it since it is quite rare for a Kotlin lambda function to be a higher-order function. Allowing parametric effects would also disallow our heuristic for implementing the fast, enumeration-only utilization lattice.
 
