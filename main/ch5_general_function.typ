@@ -61,7 +61,7 @@ $
   Ef := EfU | EfI | EfN | EfX | epsilon
 $ <eq:UtilEffects>
 
-We then extend the function type signature after its return type with effect annotations for each of its parameter and free variable in cases of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
+We then extend the function type signature after its return type with effect annotations for each of its parameters and free variables in case of lambda functions. @eq:FuncSignWithEffects shows the extended function type signature with $PiEf$ the map of parameter indexes to utilization effects and, in case of lambda functions, with $PhiEf$ the map of free variables to utilization effects. A function without any effect annotation is equivalent to having no effect to its arguments and free variables.
 
 $
   f : (t_1,..., t_n) -> t_ret andef PiEf union PhiEf\

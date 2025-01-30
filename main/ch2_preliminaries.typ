@@ -79,10 +79,10 @@ $
 $ <eq:ReachingDefAnalysis>
 
 
-The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At program start, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we replace the mapping of the variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
+The reaching definition analysis computes information of past assignments that might affect the variable values, and thus it is a forward, may-analysis. At the start of the program's execution, all variables are mapped to empty sets. The entry equations are the least upper bound of the predecessors' state, since it's a forward, may-analysis. When there is an assignment node $p$ in the form of `x=expr`, we replace the mapping of the variable $x$ in the program state to the singleton set of the assignment. Since other type of statements do not change variable values, their equations simply flow the entry points' program state.
 
 == Effect system
-An effect is an abstract information about what happened when a part of a program is executed #citep(<NielsonPPA>, 17), such as whether an exception might be raised or which system calls are called by the program. To analyze effects, the type system of a programming language is extended with an effect system, in which annotations are typically added to the function type representing informations related to its internal computation. This is quite different to an annotated type system, since the effect annotation is inherent to the function itself, and not the input or the output of the function #citep(<NielsonPPA>, 323).
+An effect is abstract information about what happens when a part of a program is executed #citep(<NielsonPPA>, 17), such as whether an exception might be raised or which system calls are called by the program. To analyze effects, the type system of a programming language is extended with an effect system, in which annotations are typically added to the function type representing informations related to its internal computation. This is quite different to an annotated type system, since the effect annotation is inherent to the function itself, and not the input or the output of the function #citep(<NielsonPPA>, 323).
 
 We can extend the function type $(t_1, .., t_n) -> t_ret$ with the effect annotation $phi$ as #box($(t_1, .., t_n) ->^phi t_ret$), or sometimes written as $(t_1, .., t_n) -> t_ret andef phi$. The definition of the effect annotation depends on what kind of effects we want to analyze, but it usually is a set. For example, in exception analysis, the effect annotation $phi$ is defined as a set of exceptions, while in side-effect analysis the effect annotation can be a set of system calls such as console operations, file handling operations, memory allocations, etc.
 
@@ -95,7 +95,7 @@ $ <eq:SubeffectingRule>
 
 == The Kotlin programming language
 
-Kotlin is a statistically typed, general-purpose, object-oriented programming language developed by JetBrains #citep(<KotlinSpec2020>, 3). While mainly object-oriented, Kotlin also supports some aspects of the functional programming paradigm such as higher-order functions and lambda literals. We shall delve into some features of the Kotlin language that are connected to this research.
+Kotlin is a statistically typed, general-purpose, object-oriented programming language developed by JetBrains #citep(<KotlinSpec2020>, 3). While mainly object-oriented, Kotlin also supports some aspects of the functional programming paradigm such as higher-order functions and lambda expressions. We shall delve into some features of the Kotlin language that are connected to this research.
 
 === Type system
 
@@ -199,7 +199,7 @@ For our analysis purposes, we can assume that the CFG of the program already pas
 
 === Annotation
 
-Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declaration, function declaration, and function parameter #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which can be source-only, retained in compiled binary, or accessible during runtime. Annotation can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
+Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declarations, function declarations, and function parameters #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which can be source-only, retained in compiled binary, or accessible during runtime. Annotation can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
 
 #listing("Annotation usage in Kotlin")[
 ```kt
@@ -216,7 +216,7 @@ annotation class Ann(val message: String = "")
 }
 ```] <lst:KotlinAnnotation>
 
-Annotation can be used as a simple way to extend Kotlin without changing too much of the syntax. For example, if we want to add an effect system to the function type, we can use annotations in the function signature to represent the effects.
+Annotations can be used as a simple way to extend Kotlin without changing too much of the syntax. For example, if we want to add an effect system to the function type, we can use annotations in the function signature to represent the effects.
 
 == Common notations and definitions
 

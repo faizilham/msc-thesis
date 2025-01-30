@@ -5,7 +5,7 @@
 
 We start with a simplified version of the problem. In this version, the utilizable values can only be constructed by the function `create()` and utilized by the function `utilize(u)`. Other functions do not affect the values' utilization status, and we purposefully ignore any utilization through higher-order functions and collection types.
 
-The goal of the utilization analysis is to find which utilizable values are guaranteed to be utilized and which are not. A value is guaranteed to be utilized if all program execution paths starting from its `create` call always reach a `utilize` call. Any `create` calls may have a path not reaching a `utilize` call should be reported as an error. Using this simplified model, we want to focus first on ensuring the soundness of the analysis in regards to reference alias problem.
+The goal of the utilization analysis is to find which utilizable values are guaranteed to be utilized and which are not. A value is guaranteed to be utilized if all program execution paths starting from its `create` call always reach a `utilize` call. Any `create` calls that may have a path not reaching a `utilize` call should be reported as an error. Using this simplified model, we want to focus first on ensuring the soundness of the analysis in regard to the reference alias problem.
 
 #listing("Utilization tracking in the simplified model")[
 ```kotlin

@@ -24,7 +24,7 @@
 
 #include "main/ch1_introduction.typ"
 #include "main/ch2_preliminaries.typ"
-#include "main/ch3_related_works.typ"
+#include "main/ch3_related_work.typ"
 #include "main/ch4_simple_model.typ"
 #include "main/ch5_general_function.typ"
 #include "main/ch6_collection_extension.typ"

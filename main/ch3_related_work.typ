@@ -1,12 +1,12 @@
 #import "../lib/utilities.typ": *
 
-= Related Works
+= Related Work
 
-In this chapter, we review literatures and other researches related to the utilization analysis problem. We first look into static analyses in some programming languages that are similar to the utilization analysis.
+In this chapter, we review literature and other research related to the utilization analysis problem. We first look into static analyses in some programming languages that are similar to the utilization analysis.
 
 == Static analyses similar to the utilization analysis
 
-Many languages include unused variable and unused return value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack the properties we want for ensuring utilization. For example, the Kotlin compiler report any unused variables or parameters, it does not report any unused return values. In Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a value is always deemed to be used if it passed as a parameter to any kind of functions, unlike the criteria for value utilization. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
+Many languages include unused variable and unused return value analyses in their compilers or development tools. However, these analyses tend to be minimal and lack the properties we want for ensuring utilization. For example, the Kotlin compiler reports any unused variables or parameters, it does not report any unused return values. In Swift #cite(<SwiftWarn>), unused values from non-void returning functions may produce warnings unless the functions are annotated as discardable. However, a value is always deemed to be used if it passed as a parameter to any kind of functions, unlike the criteria for value utilization. In C++17 and above #cite(<CppNoDiscard>), compilers are encouraged to report a warning if there is an unused value from a function with `[[nodiscard]]` attribute. The default behavior, however, is not reporting any unused value.
 
 Requiring values to be used at least once, which is the heart of utilization analysis, is similar to requiring values or resources to be used at most or exactly once. One popular language that are built upon this principle is Rust @klabnik2023rust, in which non-copyable values can only be used at most once to guarantee memory safety without needing a garbage collector. These kinds of resource usage restrictions are often defined using a substructural type system.
 
@@ -24,9 +24,9 @@ Depending on which structural properties are held or broken, one may get a diffe
   + Linear type systems are type systems where both the contraction and weakening properties are broken and the exchange property is held, resulting in type systems that require variables to be used exactly once. This type system is first developed from linear logic #cite(<WadlerLinearTC>), and is among the earliest substructural type systems to be described.
   + Ordered type systems are type systems where all structural properties are broken, resulting in type systems that require variables to be used exactly once and in the same order in which they are declared.
 
-Another type system related to the standard substructural type systems is the uniqueness type. Uniqueness type, first introduced by Smetsers et al. in the Clean language #cite(<uniquenessClean>), guarantees the uniqueness of a variable reference, i.e. there is exactly one reference to the variable value. This way, reference aliasing is much easier to handle since there should only be one reference for a unique variable.
+Another type system related to the standard substructural type systems is uniqueness types. Uniqueness types, first introduced by Smetsers et al. in the Clean language #cite(<uniquenessClean>), guarantees the uniqueness of a variable reference, i.e. there is exactly one reference to the variable value. This way, reference aliasing is much easier to handle since there should only be one reference for a unique variable.
 
-Uniqueness type is the dual of the linear type, as formally shown as a unified calculus by Marshall, Vollmer, and Orchard #cite(<LinearUniqMarshall>). In an informal sense, linear type is a future guarantee while uniqueness type is a past guarantee. Linear type guarantees that in the future a linear variable will be consumed exactly once, whereas uniqueness type guarantees that since its creation, there was and is exactly one reference to the unique variable.
+Uniqueness type is the dual of the linear type, as formally shown as a unified calculus by Marshall, Vollmer, and Orchard #cite(<LinearUniqMarshall>). In an informal sense, linear types are future guaranteed while uniqueness types are past guarantees. Linear type guarantees that in the future a linear variable will be consumed exactly once, whereas uniqueness type guarantees that since its creation, there was and is exactly one reference to the unique variable.
 
 == Other related works
 
