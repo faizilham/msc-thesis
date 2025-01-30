@@ -24,11 +24,11 @@ Depending on which structural properties are held or broken, one may get a diffe
   + Linear type systems are type systems where both the contraction and weakening properties are broken and the exchange property is held, resulting in type systems that require variables to be used exactly once. This type system is first developed from linear logic #cite(<WadlerLinearTC>), and is among the earliest substructural type systems to be described.
   + Ordered type systems are type systems where all structural properties are broken, resulting in type systems that require variables to be used exactly once and in the same order in which they are declared.
 
-Another type system related to the standard substructural type systems is uniqueness types. Uniqueness types, first introduced by Smetsers et al. in the Clean language #cite(<uniquenessClean>), guarantees the uniqueness of a variable reference, i.e. there is exactly one reference to the variable value. This way, reference aliasing is much easier to handle since there should only be one reference for a unique variable.
+Other type systems related to the standard substructural type systems are uniqueness type systems. Uniqueness types, first introduced by Smetsers et al. in the Clean language #cite(<uniquenessClean>), guarantee the uniqueness of a variable reference, i.e. there is exactly one reference to the variable value. This way, reference aliasing is much easier to handle since there should only be one reference for a unique variable.
 
 Uniqueness type is the dual of the linear type, as formally shown as a unified calculus by Marshall, Vollmer, and Orchard #cite(<LinearUniqMarshall>). In an informal sense, linear types are future guaranteed while uniqueness types are past guarantees. Linear type guarantees that in the future a linear variable will be consumed exactly once, whereas uniqueness type guarantees that since its creation, there was and is exactly one reference to the unique variable.
 
-== Other related works
+== Other related work
 
 A more fine-grained approach than the standard substructural type system is the graded modal type system based on bounded linear logic presented by Orchard, Liepelt, and Eades #cite(<Granule19>). This type system, which is implemented for the Granule language, allows quantitative reasoning of variable usages. Instead of rougher guarantees like "exactly once", "at most once" or "at least once", the type system allows usage guarantee of a specific range of natural numbers or any semiring structures. A graded type `Int [1..3]` in Granule means that the integer value must be used at least once and at most three times.
 
