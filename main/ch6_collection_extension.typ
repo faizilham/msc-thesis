@@ -176,7 +176,7 @@ $
  "Warnings" = {f | f in "Cons" and s_"fin" (f) leqsq.not { UT } }
 $
 
-For functions with utilization-annotated return type, the analysis may also check whether the returned values comply with the annotation. From the return statement nodes, the analysis computes the map ReturnUtil, which is the map of returned values to its utilization just before the return statement. The actual utilization of the return value $u_ret$ is simply the joined utilization status in ReturnUtil. The analysis then produces a warning if $u_ret leqsq.not utv_ret$, given $utv_ret$ return utilization annotation.
+For functions with utilization-annotated return type, the analysis also checks whether the returned values comply with the annotation. From the return statement nodes, the analysis computes the map ReturnUtil, which is the map of returned values to its utilization just before the return statement. The actual utilization of the return value $u_ret$ is simply the joined utilization status in ReturnUtil. The analysis then produces a warning if $u_ret leqsq.not utv_ret$, given $utv_ret$ return utilization annotation.
 
 $
   "ReturnUtil" = union.big_(p in "Node") { c |-> sp(c) | c in "Sources"(p, e), p "is a" mono("return" lbl(e)) "node"}\
@@ -196,7 +196,7 @@ $
   )
 $ <eq:ParamWarning2>
 
-The analysis may also infer the utilization annotation of a lambda function. At the start node, it assigns each utilizable parameter $p_i$ with a utilization variable $omega_i$. Then, after transfer function evaluations, the utilization annotation of parameters $utv_i$ and utilization annotation of return value $utv_ret$ are inferred as follows.
+The analysis also infers the utilization annotation of a lambda function. At the start node, it assigns each utilizable parameter $p_i$ with a utilization variable $omega_i$. Then, after transfer function evaluations, the utilization annotation of parameters $utv_i$ and utilization annotation of return value $utv_ret$ are inferred as follows.
 
 $
   utv_i = gamma_"fin" (omega_i) "for each" p_i in "Params"\

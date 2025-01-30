@@ -387,7 +387,7 @@ $ <eq:UnifyDef>
 
 === Analysis result and effect inference
 
-After a single pass of transfer functions evaluations, the analysis may report any unutilized construction calls in the function as follows.
+After a single pass of transfer functions evaluations, the analysis reports any unutilized construction calls in the function as follows.
 
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
