@@ -96,7 +96,7 @@ Notice how `newUtilizable` does not have an effect since it only creates a new v
 
 === Parametric utilization effect
 
-Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions may also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example the function `apply(f,x) = f(x)`, which applies the function `f` with the value `x`, is annotated as follows.
+Unlike first-order functions, higher-order functions usually do not affect utilization directly. Instead, its effects depend on the functions it receives as an argument. In order to handle this, functions may also be annotated with the parametric annotation $epsilon$ for a parametric effect, and $phiEf$ for a parametric map of free variable effects. For example, the function `apply(f,x) = f(x)`, which applies the function `f` with the value `x`, is annotated as follows.
 
 $
   "apply" : ((A) -> B andef { 1 |-> epsilon } union phiEf, A ) -> B andef { 2 |-> epsilon } union phiEf\
@@ -137,7 +137,7 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:FuncAliasTransfers>
 
-The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there are more than one reachable definitions then the reference would be mapped to $top$. Another notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
+The transfer functions are similar to the reachable definitions analysis. The main difference is the function lattice is a flat lattice, meaning if there is more than one reachable definition then the reference would be mapped to $top$. Another notable difference is for function calls, in which we also set it to $top$ since we currently do not handle function-returning functions.
 
 We then define a function to resolve the function signature from a reference as @eq:ResolveSign. If the reference can be resolved to a single top-level or lambda function declaration, it simply returns the function's signature. Otherwise, it returns the function type with unknown utilization effects since we cannot guarantee what are the effects. The signature of a top-level function definition is given by annotations, while a lambda function's signature is typically inferred. We will discuss how to infer the effect signature of lambda functions later.
 
@@ -210,7 +210,7 @@ $
 
 $ <eq:RVPostExecTransferModified2>
 
-The definitions of SafeReach and Sources have not changed, but we include them here for convenience's sake. Notice that SafeReach still only returns construction calls if there are more than one reachable definition. This means that references to parameters and free variables behave similarly to references of local variables, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
+The definitions of SafeReach and Sources have not changed, but we include them here for convenience's sake. Notice that SafeReach still only returns construction calls if there is more than one reachable definition. This means that references to parameters and free variables behave similarly to references of local variables, in which a reference to a parameter or free variable is safely reachable if it is the only reachable value.
 $
   &"SafeReach"(p, e) &&= cases(
     r_e & "if" abs(r_e) <= 1,
@@ -391,7 +391,7 @@ After a single pass of transfer functions evaluations, the analysis may report a
 
 $ "Warnings" = {f | f in "Cons" and evalexit(mono("exit"))(f) leqsq.not { UT } } $
 
-The analysis also produce warnings for top-level function signature effects that do not match the actual utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
+The analysis also produces warnings for top-level function signature effects that do not match the actual utilization as shown in @eq:ParamWarningNonParametric. For example, if the function is annotated with parameter effect ${ 1 |-> EfU}$ but the first parameter is not guaranteed to be utilized, then it should be reported as an error.
 
 $
 "ParamWarnings" = {p_i | p_i in "Params" and PiEf(i) eq.not "GetEff"(evalexit(mono("exit"))(p_i)) }\

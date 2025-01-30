@@ -109,7 +109,7 @@ Another notable feature of the Kotlin type system is the flow-based type inferen
 
 We first define a model of control flow graph (CFG) that we use in the data flow analysis. This CFG model is a simplified version of the real control flow graph in the Kotlin compiler #citep(<KotlinSpec2020>, 231).
 
-We assume that each expression and sub-expression in the program's AST is labeled with a unique label $e$. @lst:ExprLabel shows an example of expressions labeling, in which the numbers written in superscript letter are the labels for the corresponding expression.
+We assume that each expression and sub-expression in the program's AST is labeled with a unique label $e$. @lst:ExprLabel shows an example of expression labeling, in which the numbers written in superscript letters are the labels for the corresponding expression.
 #let cfg(body) = text(font: "Consolas", [[#body]])
 
 #listing("Expression labeling")[
@@ -199,7 +199,7 @@ For our analysis purposes, we assume that the CFG of the program already passes 
 
 === Annotation
 
-Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declarations, function declarations, and function parameters #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which are source-only, retained in compiled binary, or accessible during runtime. Annotations can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
+Annotation is a feature in Kotlin for attaching metadata to various entities in a program, such as class declarations, function declarations, and function parameters #citep(<KotlinSpec2020>, 281). An annotation class may receive values of types integers, enumerations, strings, other annotation types, and arrays of the previously mentioned types. Each annotation class has a retention level indicating its lifetime, which is source-only, retained in compiled binary, or accessible during runtime. Annotations can be declared in-program by users using annotation class syntax. @lst:KotlinAnnotation shows an example of a user-defined annotation and its usage.
 
 #listing("Annotation usage in Kotlin")[
 ```kt
