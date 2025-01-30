@@ -108,7 +108,7 @@ fun test() {                    //s10 = {C1: ⊤, C2: UT, ...}
 
 == Forward analysis
 
-The backward analysis works quite well in the simplified problem and has the advantage of not requiring variable value tracking.
+The backward analysis solves the reference alias problem and has the advantage of not requiring variable value tracking.
 However, we find it hard to generalize the backward analysis to meet our goals. This is especially true for utilization status prerequisites, which are required to handle types like collection and file handler types. The backward analysis provides _future_ guarantees for past executions, while the utilization prerequisites need _past_ guarantees. To provide past guarantees, we need a forward-moving analysis instead of a backward one. In this section, we shall define the forward analysis of the simplified problem that will become the base for the generalized analysis.
 
 The forward utilization analysis is divided into two parts, which are the safely-reachable value analysis and the utilization analysis itself. We divide the analysis into two parts for the ease and clarity of the definitions, but in practice, it is possible and more efficient to combine both of them into a single analysis, since both of them are forward-moving analyses. The main idea of this analysis is to first identify which values constructed by `create` calls are safely reachable from a variable or an expression, then to mark those values as utilized when it is passed as an argument to a `utilize` call. Any values that may not always be marked as utilized at the end of the function should be reported as an error.
