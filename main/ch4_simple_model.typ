@@ -196,9 +196,9 @@ $
   &evalexit(p) &&= evalentry(p)\
 $ <eq:RVTransferFunc>
 
-In the construction call case, the call expression is simply mapped to the singleton set of the construction function. In the variable access expresssion case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to the current variable reference, denoted by the variable-node pair $(x, p)$. This is quite important since we want to distinguish when assignment from variable to variable happened. In the case of variable declaration, the variable $x$ is mapped to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
+In the construction call case, the call expression is simply mapped to the singleton set of the construction function. In the variable access expression case, instead of mapping $e$ to the reachable values of $x$, which is $rpe(x)$, we instead map it to the current variable reference, denoted by the variable-node pair $(x, p)$. This is quite important since we want to distinguish when assignment from variable to variable happened. In the case of variable declaration, the variable $x$ is mapped to the reachable set of the initial expression $e$. The variable assignment case is quite similar to the declaration, but in this case we want to grow the occlusion set with the previous values of $x$. When we grow the occlusion set, only construction sites are included.
 
-When the analysis reaches a fixpoint, we can define the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
+When the analysis reaches a fix-point, we can define the safely reachable references function  $"SafeReach": ("Node", "Ref") -> powerset("VarAt" union "Cons")$ and construction sites resolving function $"Sources" : ("Node","Ref") -> powerset("Cons")$, defined as follows.
 #[
 #show math.equation.where(block: true): set block(spacing: 1em)
 $

@@ -110,7 +110,7 @@ $ <eq:UtilAnnoTransferReturn>
 
 We choose to keep this behavior since we do not have a proper alias tracking. For example, the identity function is annotated as $(ann(omega) x) -> ann(omega) x andef {1 |-> UT}$, implying that the function utilizes the input and creates a new value with the same previous utilization, even if it is not actually the case.
 
-The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occuring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
+The most important change to the transfer functions is to the function call node case. First, we update the Instantiate function to requires the utilization statuses of each arguments, and also returns back the unification environment $Gamma$. Next, we update all utilization variable $omega$ occurring in $yp$ and $Gamma$ to its replacement value, so that later we can infer the required utilization statuses assigned to $omega$.
 $
   &evalexit(mono("p:" lbl(e) = lbl(f) (lbl(a_1),..,lbl(a_n)))) &&= (("MarkFV" compose "MarkArgs" compose "MarkCall")(sp), ypo), "where:"\
   &wide "MarkCall(s)" &&= sp[f |-> u_ret | f in "Cons"]\
@@ -122,7 +122,7 @@ $
 $
 ]
 
-Instead of always marking the utilization of construction call sites to $NU$, it now depends on instantiated utilization annotation of the function's return value. We also update the function `ApplyEff` called by `MarkArgs` and `MarkFV`, which now also replaces any occuring utilization variable $omega$ to $ypo(omega)$, that is the latest known assignment value of $omega$ after the signature instantiation.
+Instead of always marking the utilization of construction call sites to $NU$, it now depends on instantiated utilization annotation of the function's return value. We also update the function `ApplyEff` called by `MarkArgs` and `MarkFV`, which now also replaces any occurring utilization variable $omega$ to $ypo(omega)$, that is the latest known assignment value of $omega$ after the signature instantiation.
 
 #[
 $

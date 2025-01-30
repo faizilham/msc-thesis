@@ -4,7 +4,7 @@
 
 = Generalizing the Analysis to All Functions
 
-While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similiar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
+While the simplified model of the problem is useful as a starting point, in practice we need a more sophisticated model that can handle utilizations through any functions and not just `create` and `utilize`. We start by defining what can a function do in relation to utilizable values. A function can utilize any of its utilizable arguments, similar to the `utilize` function. A function that returns a utilizable types is also regarded as a value-constructing function, just like the `create` function. Accordingly, a utilizable value that escapes a function through the return statement should also be regarded as utilized inside that function. @lst:TopLevelUtilEx shows an example of how some functions may affect utilization. The `utilizeTwo` function utilizes both of its arguments, while the `newUtilizable` function is basically an intermediary for a `create` function and thus its behavior is the same as `create`.
 
 #listing("Top level functions utilization examples")[```kt
 fun utilizeTwo(a: Utilizable, b: Utilizable) { // Utilize a and b
@@ -344,7 +344,7 @@ $
   )\
 $ <eq:CombineDef>
 
-We define the replace function as shown in @eq:ReplaceDef. As the name suggests, it replaces any occurence of effect variables $epsilon$ and $phiEf$ based on the combined environment.
+We define the replace function as shown in @eq:ReplaceDef. As the name suggests, it replaces any occurrence of effect variables $epsilon$ and $phiEf$ based on the combined environment.
 
 $
   "replace"(Gamma, PiEf) = {i |-> ef | i |-> epsilon in PiEf, Gamma(epsilon) = {ef}}\
@@ -412,7 +412,7 @@ $
   PhiEf = {v -> "GetEff"(evalexit(mono("exit"))(v)) | v in "FV" }\
 $
 
-This method of effect checking and inference can accomodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
+This method of effect checking and inference can accommodate most common cases in utilization analysis. However, it is only limited to non-parametric effect signature since we only recorded concrete utilization statuses (i.e. $NU$ or $UT$ or $top$ instead of a variable) in the analysis lattices.
 
 
 == Chapter summary
